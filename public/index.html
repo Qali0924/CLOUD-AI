@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLOUD AI</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+    <style>
+        /* Styl dla najważniejszych elementów do przepisania */
+#result strong {
+    color: #2d6a4f; /* Ciemna, czytelna zieleń */
+    background-color: #d8f3dc; /* Bardzo jasne zielone tło (jak zakreślacz) */
+    padding: 2px 6px;
+    border-radius: 6px;
+    border-bottom: 2px solid #52b788;
+}
+
+/* Wyjątek dla wzorów MathJax wewnątrz pogrubienia */
+#result strong .MathJax {
+    color: #1b4332 !important;
+    font-weight: bold;
+}
+        :root {
+            --sky-blue: #a3e0f9;
+            --soft-blue: #3a86ff;
+            --dark-blue: #023e8a;
+            --glass: rgba(255, 255, 255, 0.7);
+            --cloud: #ffffff;
+            --accent: #ff006e;
+        }
+
+        body { 
+            margin: 0; padding: 20px;
+            font-family: 'Quicksand', sans-serif; /* Bardziej obły, przyjazny font */
+            background-color: var(--sky-blue);
+            display: flex; justify-content: center;
+            min-height: 100vh; overflow-x: hidden;
+        }
+
+        /* --- ANIMOWANE TŁO --- */
+        .sky-background { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
+        .cloud {
+            background: var(--cloud); border-radius: 100px; position: absolute;
+            filter: blur(8px); opacity: 0.5; animation: moveClouds linear infinite;
+        }
+        .cloud::after, .cloud::before { content: ''; background: var(--cloud); position: absolute; border-radius: 100px; }
+        .cloud::after { width: 100px; height: 100px; top: -50px; left: 50px; }
+        .cloud::before { width: 180px; height: 180px; top: -90px; right: 50px; }
+        .c1 { width: 300px; height: 100px; top: 15%; animation-duration: 40s; left: -350px; }
+        .c2 { width: 200px; height: 60px; top: 50%; animation-duration: 25s; left: -250px; opacity: 0.3; }
+        @keyframes moveClouds { 0% { left: -400px; } 100% { left: 100%; } }
+
+        /* --- KONTENER GŁÓWNY --- */
+        .container { 
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            padding: 40px; border-radius: 40px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.1);
+            max-width: 650px; width: 100%;
+            border: 2px solid rgba(255,255,255,0.5);
+            text-align: center;
+        }
+
+        h1 { color: var(--soft-blue); font-size: 2.8rem; margin: 0; font-weight: 700; }
+        .tagline { color: var(--dark-blue); opacity: 0.7; margin-bottom: 30px; }
+
+        /* --- CUSTOMOWY WYBÓR POZIOMU --- */
+        .level-picker {
+            display: flex; gap: 15px; justify-content: center; margin-bottom: 25px;
+        }
+        .level-card {
+            flex: 1; background: var(--cloud); padding: 15px; border-radius: 20px;
+            cursor: pointer; border: 3px solid transparent; transition: 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        .level-card.active { border-color: var(--soft-blue); background: #eef5ff; transform: scale(1.05); }
+        .level-card i { display: block; font-size: 1.5rem; margin-bottom: 5px; }
+
+        /* --- CUSTOMOWY WRZUT ZDJĘCIA --- */
+        .file-upload {
+            position: relative; background: var(--cloud);
+            border: 3px dashed var(--sky-blue); border-radius: 30px;
+            padding: 40px 20px; transition: 0.3s; cursor: pointer;
+            margin-bottom: 25px;
+        }
+        .file-upload:hover { border-color: var(--soft-blue); background: #fdfdfd; }
+        .file-upload input { opacity: 0; position: absolute; width: 100%; height: 100%; top: 0; left: 0; cursor: pointer; }
+        .file-upload .icon { font-size: 3rem; color: var(--soft-blue); margin-bottom: 10px; display: block; }
+        .file-name { display: block; margin-top: 10px; font-size: 0.9rem; color: var(--dark-blue); font-weight: bold; }
+
+        /* --- PRZYCISK AKCJI --- */
+        .solve-btn {
+            background: linear-gradient(135deg, var(--soft-blue), var(--dark-blue));
+            color: white; border: none; padding: 18px 40px;
+            border-radius: 50px; font-size: 1.2rem; font-weight: bold;
+            cursor: pointer; transition: 0.4s; width: 80%;
+            box-shadow: 0 10px 20px rgba(58, 134, 255, 0.4);
+        }
+        .solve-btn:hover { transform: translateY(-5px) scale(1.02); box-shadow: 0 15px 30px rgba(58, 134, 255, 0.5); }
+        .solve-btn:active { transform: translateY(0); }
+
+        /* --- WYNIK --- */
+        #result {
+            margin-top: 30px; padding: 30px; background: var(--cloud);
+            border-radius: 30px; display: none; text-align: left;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
+            border: 1px solid var(--sky-blue); line-height: 1.8;
+        }
+
+        .loader { 
+            display: none; margin: 20px auto; width: 40px; height: 40px;
+            border: 5px solid #f3f3f3; border-top: 5px solid var(--soft-blue);
+            border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="sky-background">
+        <div class="cloud c1"></div>
+        <div class="cloud c2"></div>
+    </div>
+
+    <div class="container">
+        <h1>☁️ CLOUD AI ☁️</h1>
+        <p class="tagline">TWÓJ INTELIGENTNY MÓZG!</p>
+
+        <div class="level-picker">
+            <div class="level-card active" onclick="setLevel('liceum', this)">
+                <span>🎓</span>
+                <strong>Liceum</strong>
+            </div>
+            <div class="level-card" onclick="setLevel('podstawowka', this)">
+                <span>🎒</span>
+                <strong>Podstawówka</strong>
+            </div>
+        </div>
+        <input type="hidden" id="level" value="liceum">
+
+        <div class="file-upload">
+            <span class="icon">📸</span>
+            <strong>Kliknij lub upuść zdjęcie zadania</strong>
+            <p style="font-size: 0.8rem; opacity: 0.6;">PNG, JPG lub WebP</p>
+            <input type="file" id="imageInput" accept="image/*" onchange="updateFileName(this)">
+            <span id="fileNameDisplay" class="file-name"></span>
+        </div>
+
+        <button class="solve-btn" id="solveBtn" onclick="solve()">ROZWIĄŻ ZADANIE</button>
+
+        <div class="loader" id="loader"></div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // Funkcja do wybierania poziomu
+        function setLevel(val, el) {
+            document.getElementById('level').value = val;
+            document.querySelectorAll('.level-card').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        // Wyświetlanie nazwy pliku
+        function updateFileName(input) {
+            const nameDisplay = document.getElementById('fileNameDisplay');
+            if(input.files[0]) {
+                nameDisplay.innerText = "📄 " + input.files[0].name;
+            }
+        }
+
+        async function solve() {
+            const fileInput = document.getElementById('imageInput');
+            const resDiv = document.getElementById('result');
+            const loader = document.getElementById('loader');
+            const btn = document.getElementById('solveBtn');
+
+            if (!fileInput.files[0]) return alert("Nie zapomnij o zdjęciu! ☁️");
+
+            btn.disabled = true;
+            loader.style.display = 'block';
+            resDiv.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('image', fileInput.files[0]);
+            formData.append('level', document.getElementById('level').value);
+
+            try {
+                const response = await fetch('/solve', { method: 'POST', body: formData });
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+
+                resDiv.innerHTML = marked.parse(data.result);
+                resDiv.style.display = 'block';
+                
+                if (window.MathJax) {
+                    MathJax.typesetPromise([resDiv]);
+                }
+            } catch (err) {
+                alert("Ojej! Coś poszło nie tak: " + err.message);
+            } finally {
+                btn.disabled = false;
+                loader.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
