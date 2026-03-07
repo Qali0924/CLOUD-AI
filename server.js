@@ -35,4 +35,11 @@ ZASADY FORMATOWANIA:
     }
 });
 
-app.listen(3000, () => console.log(`🚀 Serwer działa na porcie 3000`));
+
+// Ta linijka sprawdza, czy Render dał nam port (process.env.PORT), 
+// a jeśli nie (np. u Ciebie na kompie), to bierze 3000.
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+    console.log(`🚀 Serwer śmiga na porcie ${PORT}`);
+});
