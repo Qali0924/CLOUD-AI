@@ -10,7 +10,7 @@ const app = express();
 app.use(express.json());
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Zainicjuj API - upewnij się, że masz najnowszą wersję biblioteki: npm install @google/generative-ai
+// Zainicjuj API - upewnij się, że w package.json masz najnowszą wersję biblioteki!
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.use(express.static('public'));
@@ -19,38 +19,30 @@ app.post('/solve', upload.single('image'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: "Wgraj zdjęcie! 📸" });
 
-        const { subject, mode } = req.body;
-        
-        // ZMIANA: Próbujemy użyć nazwy 'gemini-1.5-flash', która jest najbardziej uniwersalna
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const { subject, level, mode } = req.body;
+
+        // POWRÓT DO 2.0 FLASH - używamy pełnej ścieżki i wersji v1beta dla najnowszych modeli
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-2.0-flash",
+            apiVersion: "v1beta" 
+        });
 
         const prompts = {
             matematyka: "Jesteś ekspertem matematyki.",
             polski: "Jesteś polonistą.",
             fizyka: "Jesteś fizykiem.",
-            inne: "Jesteś nauczycielem."
+            inne: "Jesteś wszechstronnym nauczycielem."
         };
 
         let basePrompt = prompts[subject] || prompts.inne;
-        let styleInstruction = "";
-
-        // Obsługa Trybu Ściąganie (Szybki i konkretny)
-        if (mode === 'cheat') {
-            styleInstruction = `
-            TRYB SZYBKI (ŚCIĄGANIE): 
-            - Pomiń wstępy i uprzejmości.
-            - Podaj tylko konkretne kroki i wynik.
-            - Bądź maksymalnie zwięzły.`;
-        } else {
-            styleInstruction = `
-            TRYB STANDARDOWY: 
-            - Wyjaśnij zadanie krok po kroku, aby uczeń zrozumiał materiał.`;
-        }
+        let styleInstruction = (mode === 'cheat') 
+            ? "TRYB ŚCIĄGANIE: Zero teorii, same obliczenia i pogrubiony wynik. Bądź ekstremalnie szybki." 
+            : "TRYB NAUKA: Wyjaśnij wszystko dokładnie krok po kroku.";
 
         const finalPrompt = `
-        ${basePrompt}
+        ${basePrompt} Poziom: ${level}.
         ${styleInstruction}
-        ZASADY: 1. Wzory w $...$. 2. Wynik końcowy w **$...$**. 3. Odpowiadaj po polsku.`;
+        ZASADY: Wzory w $...$, wynik końcowy w **$...$**. Pisz po polsku.`;
 
         const result = await model.generateContent([
             finalPrompt,
@@ -61,22 +53,29 @@ app.post('/solve', upload.single('image'), async (req, res) => {
         res.json({ result: response.text() });
 
     } catch (error) {
-        console.error("Błąd szczegółowy:", error);
+        console.error("Błąd Gemini 2.0:", error);
         
-        // Obsługa błędu 429 (Limit)
+        // Jeśli 2.0 wywali limit (429), serwer automatycznie Cię o tym poinformuje
         if (error.status === 429) {
-            return res.status(429).json({ error: "Limit zapytań wyczerpany. Odczekaj 60 sekund. ⏳" });
+            return res.status(429).json({ error: "Limit Gemini 2.0 wyczerpany. Spróbuj za minutę lub zmień tryb! ⏳" });
         }
         
-        // Obsługa błędu 404 (Zła nazwa modelu)
-        if (error.status === 404) {
-            return res.status(404).json({ error: "Model AI nieodnaleziony. Sprawdź konfigurację API. 🛠️" });
-        }
-
-        res.status(500).json({ error: "Błąd serwera: " + error.message });
+        res.status(500).json({ error: "Błąd AI: " + error.message });
     }
 });
 
-// Pozostała część kodu (/chat i listen)...
+// Pozostała część kodu (/chat i listen) pozostaje bez zmian...
+app.post('/chat', async (req, res) => {
+    try {
+        const { question, context } = req.body;
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash", apiVersion: "v1beta" });
+        const prompt = `Uczeń otrzymał rozwiązanie: "${context}". Teraz pyta: "${question}". Odpowiedz krótko. Wzory w $...$.`;
+        const result = await model.generateContent(prompt);
+        res.json({ answer: result.response.text() });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Serwer śmiga na porcie ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Gemini 2.0 śmiga na porcie ${PORT}`));
