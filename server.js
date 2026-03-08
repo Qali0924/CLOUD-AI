@@ -10,27 +10,41 @@ const app = express();
 app.use(express.json());
 const upload = multer({ storage: multer.memoryStorage() });
 
-// LISTA KLUCZY Z RENDERA
+// --- DIAGNOSTYKA STARTU ---
+// Te logi pojawią się w czarnym oknie Rendera zaraz po starcie
+console.log("=== DIAGNOSTYKA KLUCZY ===");
+console.log("Klucz 1 (pierwsze 4 znaki):", process.env.GEMINI_KEY_1 ? process.env.GEMINI_KEY_1.substring(0, 4) : "BRAK!");
+console.log("Klucz 2 (pierwsze 4 znaki):", process.env.GEMINI_KEY_2 ? process.env.GEMINI_KEY_2.substring(0, 4) : "BRAK!");
+
 const apiKeys = [
     process.env.GEMINI_KEY_1,
     process.env.GEMINI_KEY_2
-].filter(key => key); // Pobiera tylko te, które wpisałeś w Environment
+].filter(key => key && key.trim().length > 0);
+
+if (apiKeys.length === 0) {
+    console.error("❌ BŁĄD KRYTYCZNY: Nie znaleziono żadnych kluczy API w Environment!");
+} else {
+    console.log(`✅ Załadowano pomyślnie ${apiKeys.length} kluczy.`);
+}
 
 let currentKeyIndex = 0;
 
 app.use(express.static('public'));
 
-// FUNKCJA ROTACJI: Próbuje rozwiązać zadanie, zmieniając klucze w razie błędu 429
+// FUNKCJA ROTACJI
 async function generateWithRotation(prompt, fileData, attempt = 0) {
-    // Jeśli sprawdziliśmy już oba klucze i oba mają limit
-    if (attempt >= apiKeys.length) {
-        throw new Error("Wszystkie klucze wyczerpały limity. Odczekaj minutę! ⏳");
+    if (apiKeys.length === 0) {
+        throw new Error("Serwer nie posiada skonfigurowanych kluczy API.");
     }
 
-    const currentKey = apiKeys[currentKeyIndex];
+    if (attempt >= apiKeys.length) {
+        throw new Error("Oba klucze są przeciążone. Odczekaj 60 sekund i spróbuj ponownie! ⏳");
+    }
+
+    const currentKey = apiKeys[currentKeyIndex].trim(); // Trim usuwa przypadkowe spacje
     const genAI = new GoogleGenerativeAI(currentKey);
     
-    // Używamy modelu 2.0 Flash
+    // Używamy modelu 2.0 Flash z v1beta
     const model = genAI.getGenerativeModel({ 
         model: "gemini-2.0-flash", 
         apiVersion: "v1beta" 
@@ -41,12 +55,18 @@ async function generateWithRotation(prompt, fileData, attempt = 0) {
         const response = await result.response;
         return response.text();
     } catch (error) {
-        // Jeśli błąd to limit (429), przełączamy klucz i próbujemy jeszcze raz
-        if (error.status === 429) {
-            console.log(`⚠️ Klucz ${currentKeyIndex + 1} zajęty. Przełączam na zapasowy...`);
+        // Obsługa limitu 429
+        if (error.status === 429 || (error.message && error.message.includes('429'))) {
+            console.log(`⚠️ Klucz ${currentKeyIndex + 1} wyczerpał limit. Przełączam na zapasowy...`);
             currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
             return generateWithRotation(prompt, fileData, attempt + 1);
         }
+        
+        // Jeśli błąd to 404, prawdopodobnie biblioteka w package.json jest za stara
+        if (error.status === 404) {
+            throw new Error("Błąd 404: Model 2.0 nieosiągalny. Sprawdź wersję @google/generative-ai w package.json!");
+        }
+        
         throw error;
     }
 }
@@ -77,7 +97,6 @@ app.post('/solve', upload.single('image'), async (req, res) => {
         ${styleInstruction}
         ZASADY: Wzory w $...$, wynik końcowy w **$...$**. Pisz po polsku.`;
 
-        // WYWOŁANIE ROTACJI ZAMIAST ZWYKŁEGO MODELU
         const text = await generateWithRotation(finalPrompt, fileData);
         res.json({ result: text });
 
@@ -90,7 +109,8 @@ app.post('/solve', upload.single('image'), async (req, res) => {
 app.post('/chat', async (req, res) => {
     try {
         const { question, context } = req.body;
-        // Czat też używa rotacji dla stabilności
+        if (apiKeys.length === 0) throw new Error("Brak kluczy API.");
+
         const genAI = new GoogleGenerativeAI(apiKeys[currentKeyIndex]);
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash", apiVersion: "v1beta" });
         
@@ -103,4 +123,4 @@ app.post('/chat', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 System rotacji (2 klucze) aktywny na porcie ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Serwer aktywny na porcie ${PORT}. Klucze: ${apiKeys.length}`));
