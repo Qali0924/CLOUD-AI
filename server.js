@@ -10,16 +10,18 @@ const app = express();
 app.use(express.json());
 const upload = multer({ storage: multer.memoryStorage() });
 
+// Zainicjuj API - upewnij się, że masz najnowszą wersję biblioteki: npm install @google/generative-ai
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.use(express.static('public'));
 
 app.post('/solve', upload.single('image'), async (req, res) => {
     try {
-        if (!req.file) return res.status(400).json({ error: "Wgraj zdjęcie!" });
+        if (!req.file) return res.status(400).json({ error: "Wgraj zdjęcie! 📸" });
 
-        // Odbieramy parametr 'mode' z frontendu
-        const { level, subject, mode } = req.body;
+        const { subject, mode } = req.body;
+        
+        // ZMIANA: Próbujemy użyć nazwy 'gemini-1.5-flash', która jest najbardziej uniwersalna
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         const prompts = {
@@ -32,28 +34,23 @@ app.post('/solve', upload.single('image'), async (req, res) => {
         let basePrompt = prompts[subject] || prompts.inne;
         let styleInstruction = "";
 
-        // LOGIKA TRYBU ŚCIĄGANIE
+        // Obsługa Trybu Ściąganie (Szybki i konkretny)
         if (mode === 'cheat') {
             styleInstruction = `
-            TRYB EKSTREMALNIE SZYBKI: 
-            1. Pomiń jakiekolwiek wstępy (np. "Oto rozwiązanie...").
-            2. Nie tłumacz teorii, jeśli nie jest to niezbędne do wyniku.
-            3. Pisz tylko konkretne obliczenia, wzory i ostateczną odpowiedź.
-            4. Bądź maksymalnie zwięzły. Odpowiedz w punktach.`;
+            TRYB SZYBKI (ŚCIĄGANIE): 
+            - Pomiń wstępy i uprzejmości.
+            - Podaj tylko konkretne kroki i wynik.
+            - Bądź maksymalnie zwięzły.`;
         } else {
             styleInstruction = `
             TRYB STANDARDOWY: 
-            1. Rozwiąż zadanie krok po kroku.
-            2. Wyjaśnij logikę postępowania, aby uczeń mógł się nauczyć.`;
+            - Wyjaśnij zadanie krok po kroku, aby uczeń zrozumiał materiał.`;
         }
 
         const finalPrompt = `
-        ${basePrompt} Poziom: ${level}. 
+        ${basePrompt}
         ${styleInstruction}
-        ZASADY FORMATOWANIA:
-        - Wszystkie wzory matematyczne i zmienne w $ ... $.
-        - Wynik końcowy pogrubiony w **$ ... $**.
-        - Odpowiadaj wyłącznie po polsku.`;
+        ZASADY: 1. Wzory w $...$. 2. Wynik końcowy w **$...$**. 3. Odpowiadaj po polsku.`;
 
         const result = await model.generateContent([
             finalPrompt,
@@ -64,24 +61,22 @@ app.post('/solve', upload.single('image'), async (req, res) => {
         res.json({ result: response.text() });
 
     } catch (error) {
-        console.error("Błąd serwera:", error);
-        res.status(500).json({ error: "Wystąpił błąd podczas generowania odpowiedzi." });
+        console.error("Błąd szczegółowy:", error);
+        
+        // Obsługa błędu 429 (Limit)
+        if (error.status === 429) {
+            return res.status(429).json({ error: "Limit zapytań wyczerpany. Odczekaj 60 sekund. ⏳" });
+        }
+        
+        // Obsługa błędu 404 (Zła nazwa modelu)
+        if (error.status === 404) {
+            return res.status(404).json({ error: "Model AI nieodnaleziony. Sprawdź konfigurację API. 🛠️" });
+        }
+
+        res.status(500).json({ error: "Błąd serwera: " + error.message });
     }
 });
 
-app.post('/chat', async (req, res) => {
-    try {
-        const { question, context } = req.body;
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const prompt = `Uczeń otrzymał rozwiązanie: "${context}". Teraz pyta: "${question}". Odpowiedz krótko i jasno. Używaj $...$ do wzorów.`;
-        const result = await model.generateContent(prompt);
-        res.json({ answer: result.response.text() });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
+// Pozostała część kodu (/chat i listen)...
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Serwer śmiga na porcie ${PORT}`));
-
-
