@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CloudSolve AI | Twój Korepetytor</title>
+    <title>ClOUD AI | TWÓJ INNOWACYJNY POMOCNIK!</title>
     
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
@@ -30,6 +30,24 @@
         .c1 { width: 300px; height: 100px; top: 10%; animation-duration: 45s; }
         .c2 { width: 250px; height: 80px; top: 70%; animation-duration: 35s; left: -250px; }
 
+        /* SIDEBAR HISTORII */
+        .history-sidebar {
+            position: fixed; left: -280px; top: 0; width: 260px; height: 100%;
+            background: var(--white); box-shadow: 5px 0 15px rgba(0,0,0,0.1);
+            transition: 0.3s; z-index: 100; padding: 20px; overflow-y: auto;
+        }
+        .history-sidebar.active { left: 0; }
+        .history-item { 
+            padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 0.85rem; 
+            transition: 0.2s; border-radius: 10px; margin-bottom: 5px;
+        }
+        .history-item:hover { background: #f0f7ff; color: var(--soft-blue); }
+        .toggle-history {
+            position: fixed; left: 10px; top: 10px; z-index: 101;
+            background: var(--soft-blue); color: white; border: none;
+            padding: 10px 15px; border-radius: 50px; cursor: pointer;
+        }
+
         .container { 
             background: var(--glass); backdrop-filter: blur(20px);
             padding: 30px; border-radius: 40px; box-shadow: 0 20px 50px rgba(0,0,0,0.1);
@@ -39,7 +57,6 @@
         h1 { color: var(--soft-blue); margin: 0; font-size: 2.8rem; text-shadow: 2px 2px white; }
         .tagline { color: var(--dark); opacity: 0.8; margin-bottom: 25px; }
 
-        /* PICKER SYSTEM */
         .section-title { font-weight: bold; color: var(--dark); display: block; margin: 15px 0 10px; text-align: left; }
         .picker { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
         .card { 
@@ -50,7 +67,6 @@
         .card.active { border-color: var(--soft-blue); transform: translateY(-3px); background: #f0f7ff; }
         .card span { font-size: 1.5rem; display: block; }
 
-        /* UPLOAD */
         .upload-area {
             background: white; border: 3px dashed var(--sky); border-radius: 30px;
             padding: 35px; margin: 25px 0; cursor: pointer; position: relative; transition: 0.3s;
@@ -64,9 +80,7 @@
             font-size: 1.2rem; font-weight: bold; cursor: pointer; width: 100%;
             box-shadow: 0 10px 25px rgba(58, 134, 255, 0.4); transition: 0.3s;
         }
-        .solve-btn:hover { transform: scale(1.02); }
 
-        /* WYNIKI I CZAT */
         #result { 
             margin-top: 25px; text-align: left; background: white; padding: 25px;
             border-radius: 30px; display: none; border: 2px solid var(--sky); line-height: 1.6;
@@ -78,12 +92,8 @@
             border-radius: 25px; text-align: left;
         }
         .chat-input-group { display: flex; gap: 10px; margin-top: 10px; }
-        .chat-input-group input { 
-            flex: 1; padding: 12px; border-radius: 15px; border: 1px solid var(--sky); outline: none;
-        }
-        .chat-input-group button { 
-            background: var(--soft-blue); color: white; border: none; padding: 10px 20px; border-radius: 15px; cursor: pointer;
-        }
+        .chat-input-group input { flex: 1; padding: 12px; border-radius: 15px; border: 1px solid var(--sky); outline: none; }
+        .chat-input-group button { background: var(--soft-blue); color: white; border: none; padding: 10px 20px; border-radius: 15px; cursor: pointer; }
 
         .loader { display: none; margin: 20px auto; width: 40px; height: 40px; border: 5px solid #f3f3f3; border-top: 5px solid var(--soft-blue); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -93,9 +103,16 @@
 <body>
     <div class="sky-bg"><div class="cloud c1"></div><div class="cloud c2"></div></div>
 
+    <button class="toggle-history" onclick="document.getElementById('sidebar').classList.toggle('active')">🕒 Historia</button>
+
+    <div class="history-sidebar" id="sidebar">
+        <h3 style="color: var(--soft-blue);">Twoje Skany</h3>
+        <div id="historyList"></div>
+    </div>
+
     <div class="container">
-        <h1>☁️ CloudSolve</h1>
-        <p class="tagline">Wgraj zdjęcie, otrzymaj wiedzę</p>
+        <h1>☁️ ClOUD AI ☁️</h1>
+        <p class="tagline">TWÓJ INTELIGENTNY POMOCNIK W SZKOLE!</p>
 
         <span class="section-title">Co rozwiązujemy?</span>
         <div class="picker">
@@ -103,12 +120,6 @@
             <div class="card" onclick="setVal('subject', 'polski', this)"><span>📚</span>Polski</div>
             <div class="card" onclick="setVal('subject', 'fizyka', this)"><span>⚛️</span>Fizyka</div>
             <div class="card" onclick="setVal('subject', 'inne', this)"><span>🌍</span>Inne</div>
-        </div>
-
-        <span class="section-title">Poziom szkoły:</span>
-        <div class="picker">
-            <div class="card active" onclick="setVal('level', 'liceum', this)">Liceum</div>
-            <div class="card" onclick="setVal('level', 'podstawowka', this)">Podstawówka</div>
         </div>
 
         <input type="hidden" id="subject" value="matematyka">
@@ -143,6 +154,47 @@
     </div>
 
     <script>
+        // Funkcje obsługi Historii
+        function saveToHistory(subject, text) {
+            let history = JSON.parse(localStorage.getItem('cloudSolveHistory') || '[]');
+            const newItem = {
+                id: Date.now(),
+                date: new Date().toLocaleString(),
+                subject: subject,
+                content: text
+            };
+            history.unshift(newItem);
+            localStorage.setItem('cloudSolveHistory', JSON.stringify(history.slice(0, 10))); // Trzymaj 10 ostatnich
+            loadHistory();
+        }
+
+        function loadHistory() {
+            const history = JSON.parse(localStorage.getItem('cloudSolveHistory') || '[]');
+            const list = document.getElementById('historyList');
+            list.innerHTML = history.map(item => `
+                <div class="history-item" onclick="viewHistoryItem(${item.id})">
+                    <strong>${item.subject.toUpperCase()}</strong><br>
+                    <small>${item.date}</small>
+                </div>
+            `).join('');
+        }
+
+        function viewHistoryItem(id) {
+            const history = JSON.parse(localStorage.getItem('cloudSolveHistory') || '[]');
+            const item = history.find(i => i.id === id);
+            if (item) {
+                const resDiv = document.getElementById('result');
+                resDiv.innerHTML = marked.parse(item.content);
+                resDiv.style.display = 'block';
+                document.getElementById('chatSection').style.display = 'block';
+                if (window.MathJax) MathJax.typesetPromise([resDiv]);
+                document.getElementById('sidebar').classList.remove('active');
+            }
+        }
+
+        // Inicjalizacja historii przy starcie
+        window.onload = loadHistory;
+
         function setVal(id, val, el) {
             document.getElementById(id).value = val;
             el.parentElement.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
@@ -172,6 +224,10 @@
                 resDiv.style.display = 'block';
                 document.getElementById('chatSection').style.display = 'block';
                 if (window.MathJax) MathJax.typesetPromise([resDiv]);
+                
+                // Zapisz do historii
+                saveToHistory(document.getElementById('subject').value, data.result);
+
             } catch (err) { alert("Błąd! 😥"); }
             finally { btn.disabled = false; loader.style.display = 'none'; }
         }
