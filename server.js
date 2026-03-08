@@ -20,7 +20,7 @@ app.post('/solve', upload.single('image'), async (req, res) => {
 
         // Odbieramy parametr 'mode' z frontendu
         const { level, subject, mode } = req.body;
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }); // Używaj 2.0-flash dla największej szybkości
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         const prompts = {
             matematyka: "Jesteś ekspertem matematyki.",
@@ -83,3 +83,4 @@ app.post('/chat', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Serwer śmiga na porcie ${PORT}`));
+
