@@ -3,86 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ClOUD AI</title>
+    <title>CloudSolve AI | Twój Korepetytor</title>
     
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
-        window.MathJax = {
-            tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] }
-        };
+        window.MathJax = { tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] } };
     </script>
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 
     <style>
         :root {
-            --sky-blue: #a3e0f9;
-            --soft-blue: #3a86ff;
-            --dark-blue: #023e8a;
-            --glass: rgba(255, 255, 255, 0.7);
-            --cloud: #ffffff;
-            --success: #2d6a4f;
-            --success-bg: #d8f3dc;
+            --sky: #a3e0f9; --soft-blue: #3a86ff; --dark: #023e8a;
+            --glass: rgba(255, 255, 255, 0.75); --white: #ffffff;
         }
 
         body { 
-            margin: 0; padding: 20px;
-            font-family: 'Quicksand', sans-serif;
-            background-color: var(--sky-blue);
-            display: flex; justify-content: center;
+            margin: 0; padding: 20px; font-family: 'Quicksand', sans-serif;
+            background-color: var(--sky); display: flex; justify-content: center;
             min-height: 100vh; overflow-x: hidden;
         }
 
-        /* TŁO CHMURKI */
-        .sky-background { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
-        .cloud { background: var(--cloud); border-radius: 100px; position: absolute; filter: blur(8px); opacity: 0.5; animation: move linear infinite; }
-        @keyframes move { 0% { left: -400px; } 100% { left: 100%; } }
-        .c1 { width: 300px; height: 100px; top: 10%; animation-duration: 40s; }
-        .c2 { width: 200px; height: 60px; top: 60%; animation-duration: 30s; left: -200px; }
+        /* ANIMOWANE TŁO */
+        .sky-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
+        .cloud { background: var(--white); border-radius: 100px; position: absolute; filter: blur(10px); opacity: 0.5; animation: move linear infinite; }
+        @keyframes move { from { left: -400px; } to { left: 100%; } }
+        .c1 { width: 300px; height: 100px; top: 10%; animation-duration: 45s; }
+        .c2 { width: 250px; height: 80px; top: 70%; animation-duration: 35s; left: -250px; }
 
         .container { 
             background: var(--glass); backdrop-filter: blur(20px);
-            padding: 30px; border-radius: 40px; box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            max-width: 600px; width: 100%; border: 2px solid white; text-align: center;
+            padding: 30px; border-radius: 40px; box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+            max-width: 650px; width: 100%; border: 2px solid white; text-align: center;
         }
 
-        h1 { color: var(--soft-blue); margin: 0; font-size: 2.5rem; }
-        .tagline { color: var(--dark-blue); opacity: 0.7; margin-bottom: 20px; }
+        h1 { color: var(--soft-blue); margin: 0; font-size: 2.8rem; text-shadow: 2px 2px white; }
+        .tagline { color: var(--dark); opacity: 0.8; margin-bottom: 25px; }
 
-        /* SELEKTORY */
-        .picker-label { font-weight: bold; color: var(--dark-blue); display: block; margin: 15px 0 5px; text-align: left; font-size: 0.9rem; }
-        .picker { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 10px; }
+        /* PICKER SYSTEM */
+        .section-title { font-weight: bold; color: var(--dark); display: block; margin: 15px 0 10px; text-align: left; }
+        .picker { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
         .card { 
-            background: white; padding: 12px 20px; border-radius: 18px; cursor: pointer;
-            border: 3px solid transparent; transition: 0.3s; flex: 1; min-width: 100px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            background: white; padding: 12px; border-radius: 20px; cursor: pointer;
+            border: 3px solid transparent; transition: 0.3s; flex: 1; min-width: 80px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
         }
-        .card.active { border-color: var(--soft-blue); transform: scale(1.05); background: #f0f7ff; }
+        .card.active { border-color: var(--soft-blue); transform: translateY(-3px); background: #f0f7ff; }
         .card span { font-size: 1.5rem; display: block; }
 
         /* UPLOAD */
-        .file-zone {
-            background: white; border: 3px dashed var(--sky-blue); border-radius: 25px;
-            padding: 30px; margin: 20px 0; cursor: pointer; position: relative;
+        .upload-area {
+            background: white; border: 3px dashed var(--sky); border-radius: 30px;
+            padding: 35px; margin: 25px 0; cursor: pointer; position: relative; transition: 0.3s;
         }
-        .file-zone:hover { border-color: var(--soft-blue); }
-        .file-zone input { position: absolute; width: 100%; height: 100%; top: 0; left: 0; opacity: 0; cursor: pointer; }
+        .upload-area:hover { border-color: var(--soft-blue); background: #fafafa; }
+        .upload-area input { position: absolute; width: 100%; height: 100%; top: 0; left: 0; opacity: 0; cursor: pointer; }
 
-        .btn {
-            background: linear-gradient(135deg, var(--soft-blue), var(--dark-blue));
-            color: white; border: none; padding: 15px 30px; border-radius: 50px;
+        .solve-btn {
+            background: linear-gradient(135deg, var(--soft-blue), var(--dark));
+            color: white; border: none; padding: 18px; border-radius: 50px;
             font-size: 1.2rem; font-weight: bold; cursor: pointer; width: 100%;
-            box-shadow: 0 10px 20px rgba(58, 134, 255, 0.3); transition: 0.3s;
+            box-shadow: 0 10px 25px rgba(58, 134, 255, 0.4); transition: 0.3s;
         }
-        .btn:hover { transform: translateY(-3px); box-shadow: 0 15px 25px rgba(58, 134, 255, 0.4); }
+        .solve-btn:hover { transform: scale(1.02); }
 
-        /* WYNIK I ZIELONE ZAZNACZENIE */
+        /* WYNIKI I CZAT */
         #result { 
-            margin-top: 20px; text-align: left; background: white; padding: 25px;
-            border-radius: 25px; display: none; border: 2px solid var(--sky-blue);
+            margin-top: 25px; text-align: left; background: white; padding: 25px;
+            border-radius: 30px; display: none; border: 2px solid var(--sky); line-height: 1.6;
         }
-        #result strong { 
-            color: var(--success); background: var(--success-bg); 
-            padding: 2px 5px; border-radius: 5px; 
+        #result strong { color: #1b4332; background: #d8f3dc; padding: 2px 6px; border-radius: 6px; }
+
+        .chat-box {
+            display: none; margin-top: 20px; padding: 20px; background: rgba(58, 134, 255, 0.1);
+            border-radius: 25px; text-align: left;
+        }
+        .chat-input-group { display: flex; gap: 10px; margin-top: 10px; }
+        .chat-input-group input { 
+            flex: 1; padding: 12px; border-radius: 15px; border: 1px solid var(--sky); outline: none;
+        }
+        .chat-input-group button { 
+            background: var(--soft-blue); color: white; border: none; padding: 10px 20px; border-radius: 15px; cursor: pointer;
         }
 
         .loader { display: none; margin: 20px auto; width: 40px; height: 40px; border: 5px solid #f3f3f3; border-top: 5px solid var(--soft-blue); border-radius: 50%; animation: spin 1s linear infinite; }
@@ -91,25 +91,22 @@
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="sky-background">
-        <div class="cloud c1"></div>
-        <div class="cloud c2"></div>
-    </div>
+    <div class="sky-bg"><div class="cloud c1"></div><div class="cloud c2"></div></div>
 
     <div class="container">
-        <h1>☁️ CLOUD AI ☁️</h1>
-        <p class="tagline">TWÓJ INNTELIGENTNY MÓZG!</p>
+        <h1>☁️ CloudSolve</h1>
+        <p class="tagline">Wgraj zdjęcie, otrzymaj wiedzę</p>
 
-        <span class="picker-label">Wybierz przedmiot:</span>
-        <div class="picker" id="subjectPicker">
+        <span class="section-title">Co rozwiązujemy?</span>
+        <div class="picker">
             <div class="card active" onclick="setVal('subject', 'matematyka', this)"><span>📐</span>Matma</div>
             <div class="card" onclick="setVal('subject', 'polski', this)"><span>📚</span>Polski</div>
             <div class="card" onclick="setVal('subject', 'fizyka', this)"><span>⚛️</span>Fizyka</div>
             <div class="card" onclick="setVal('subject', 'inne', this)"><span>🌍</span>Inne</div>
         </div>
 
-        <span class="picker-label">Poziom:</span>
-        <div class="picker" id="levelPicker">
+        <span class="section-title">Poziom szkoły:</span>
+        <div class="picker">
             <div class="card active" onclick="setVal('level', 'liceum', this)">Liceum</div>
             <div class="card" onclick="setVal('level', 'podstawowka', this)">Podstawówka</div>
         </div>
@@ -117,20 +114,29 @@
         <input type="hidden" id="subject" value="matematyka">
         <input type="hidden" id="level" value="liceum">
 
-        <div class="file-zone">
-            <span style="font-size: 2rem;">📸</span>
-            <p id="fileName">Kliknij, aby dodać zdjęcie zadania</p>
+        <div class="upload-area">
+            <span style="font-size: 2.5rem;">📸</span>
+            <p id="fileName">Kliknij, aby dodać zdjęcie</p>
             <input type="file" id="imageInput" accept="image/*" onchange="document.getElementById('fileName').innerText = this.files[0].name">
         </div>
 
-        <button class="btn" id="solveBtn" onclick="solve()">ROZWIĄŻ ZADANIE</button>
+        <button class="solve-btn" id="solveBtn" onclick="solve()">ROZWIĄŻ ZADANIE</button>
 
         <div class="loader" id="loader"></div>
         <div id="result"></div>
 
-        <div style="margin-top:25px; opacity:0.8">
+        <div class="chat-box" id="chatSection">
+            <strong>💬 Masz pytanie do tego zadania?</strong>
+            <div class="chat-input-group">
+                <input type="text" id="chatInput" placeholder="Np. Wyjaśnij krok po kroku...">
+                <button onclick="askChat()">Pytaj</button>
+            </div>
+            <div id="chatResponse" style="margin-top: 15px; border-left: 3px solid var(--soft-blue); padding-left: 10px;"></div>
+        </div>
+
+        <div style="margin-top:30px; padding-top:15px; border-top: 1px dashed var(--soft-blue); opacity:0.7">
             <small style="color:var(--soft-blue); font-weight:bold">🎧 SPOFY PLAYER</small>
-            <audio controls style="width:100%; height:30px; filter: hue-rotate(180deg); margin-top:5px">
+            <audio controls style="width:100%; height:25px; filter: hue-rotate(180deg); margin-top:5px">
                 <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
             </audio>
         </div>
@@ -149,9 +155,10 @@
             const loader = document.getElementById('loader');
             const btn = document.getElementById('solveBtn');
 
-            if (!fileInput.files[0]) return alert("Wgraj zdjęcie! ☁️");
+            if (!fileInput.files[0]) return alert("Gdzie zdjęcie? ☁️");
 
             btn.disabled = true; loader.style.display = 'block'; resDiv.style.display = 'none';
+            document.getElementById('chatSection').style.display = 'none';
 
             const formData = new FormData();
             formData.append('image', fileInput.files[0]);
@@ -161,16 +168,29 @@
             try {
                 const response = await fetch('/solve', { method: 'POST', body: formData });
                 const data = await response.json();
-                if (data.error) throw new Error(data.error);
-
                 resDiv.innerHTML = marked.parse(data.result);
                 resDiv.style.display = 'block';
+                document.getElementById('chatSection').style.display = 'block';
                 if (window.MathJax) MathJax.typesetPromise([resDiv]);
-            } catch (err) {
-                alert("Błąd: " + err.message);
-            } finally {
-                btn.disabled = false; loader.style.display = 'none';
-            }
+            } catch (err) { alert("Błąd! 😥"); }
+            finally { btn.disabled = false; loader.style.display = 'none'; }
+        }
+
+        async function askChat() {
+            const question = document.getElementById('chatInput').value;
+            const resp = document.getElementById('chatResponse');
+            const context = document.getElementById('result').innerText;
+            if(!question) return;
+
+            resp.innerText = "Chmurka myśli... ☁️";
+            const response = await fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question, context })
+            });
+            const data = await response.json();
+            resp.innerHTML = marked.parse(data.answer);
+            if (window.MathJax) MathJax.typesetPromise([resp]);
         }
     </script>
 </body>
