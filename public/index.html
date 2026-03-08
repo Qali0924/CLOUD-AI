@@ -6,39 +6,29 @@
     <title>CLOUD AI | TWÓJ INNOWACYJNY POMOCNIK!</title>
     
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script>window.MathJax = { tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] } };</script>
+    <script>
+        window.MathJax = { tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] } };
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 
     <style>
-        /* ZMIENNE KOLORÓW - OBSŁUGA MOTYWÓW */
         :root {
-            --sky: #a3e0f9; 
-            --soft-blue: #3a86ff; 
-            --dark: #023e8a;
-            --glass: rgba(255, 255, 255, 0.75); 
-            --white: #ffffff;
-            --text: #023e8a;
-            --card-bg: #ffffff;
-            --success-bg: #d8f3dc;
+            --sky: #a3e0f9; --soft-blue: #3a86ff; --dark: #023e8a;
+            --glass: rgba(255, 255, 255, 0.75); --white: #ffffff;
+            --text: #023e8a; --card-bg: #ffffff; --success-bg: #d8f3dc;
         }
 
-        /* CIEMNY MOTYW */
         [data-theme="dark"] {
-            --sky: #0b132b;
-            --soft-blue: #5bc0be;
-            --dark: #ffffff;
-            --glass: rgba(28, 37, 65, 0.85);
-            --white: #1c2541;
-            --text: #ffffff;
-            --card-bg: #3a506b;
-            --success-bg: #1b4332;
+            --sky: #0b132b; --soft-blue: #5bc0be; --dark: #ffffff;
+            --glass: rgba(28, 37, 65, 0.85); --white: #1c2541;
+            --text: #ffffff; --card-bg: #3a506b; --success-bg: #1b4332;
         }
 
         body { 
             margin: 0; padding: 20px; font-family: 'Quicksand', sans-serif;
             background-color: var(--sky); color: var(--text);
             display: flex; justify-content: center; min-height: 100vh; 
-            transition: background-color 0.5s ease;
+            transition: background-color 0.5s ease, color 0.5s ease;
         }
 
         .sky-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
@@ -52,41 +42,39 @@
             max-width: 650px; width: 100%; border: 2px solid rgba(255,255,255,0.2); text-align: center;
         }
 
-        /* SIDEBAR I PRZYCISKI */
+        /* SIDEBAR */
         .history-sidebar {
             position: fixed; right: -320px; top: 0; width: 300px; height: 100%;
             background: var(--glass); backdrop-filter: blur(25px);
             box-shadow: -10px 0 30px rgba(0,0,0,0.2); transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 1000; padding: 30px 20px; color: var(--text);
+            z-index: 1000; padding: 30px 20px; color: var(--text); overflow-y: auto;
         }
         .history-sidebar.active { right: 0; }
 
-        .theme-switcher {
-            display: flex; justify-content: space-around; margin: 20px 0;
-            background: var(--card-bg); padding: 10px; border-radius: 15px;
-        }
-        .theme-btn { 
-            cursor: pointer; font-size: 1.2rem; padding: 5px 10px; border-radius: 10px; border: none; background: transparent; color: var(--text);
-        }
+        .theme-switcher { display: flex; justify-content: space-around; margin: 20px 0; background: var(--card-bg); padding: 10px; border-radius: 15px; }
+        .theme-btn { cursor: pointer; font-size: 1rem; padding: 8px; border-radius: 10px; border: none; background: transparent; color: var(--text); font-family: inherit; font-weight: bold; }
         .theme-btn:hover { background: var(--soft-blue); color: white; }
 
-        .card { background: var(--card-bg); color: var(--text); padding: 12px; border-radius: 20px; cursor: pointer; border: 3px solid transparent; transition: 0.3s; flex: 1; }
-        .card.active { border-color: var(--soft-blue); }
+        /* CARDS */
+        .section-title { display:block; text-align:left; font-weight:bold; margin:20px 0 10px; font-size: 0.9rem; }
+        .picker { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+        .card { background: var(--card-bg); color: var(--text); padding: 12px; border-radius: 20px; cursor: pointer; border: 3px solid transparent; transition: 0.3s; flex: 1; min-width: 80px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .card.active { border-color: var(--soft-blue); transform: translateY(-3px); }
+        .card span { display: block; font-size: 1.5rem; }
 
-        .solve-btn { background: linear-gradient(135deg, var(--soft-blue), var(--dark)); color: white; border: none; padding: 18px; border-radius: 50px; font-size: 1.2rem; font-weight: bold; cursor: pointer; width: 100%; margin-top: 15px; }
+        /* BUTTONS & OUTPUT */
+        .solve-btn { background: linear-gradient(135deg, var(--soft-blue), var(--dark)); color: white; border: none; padding: 18px; border-radius: 50px; font-size: 1.2rem; font-weight: bold; cursor: pointer; width: 100%; margin-top: 15px; box-shadow: 0 10px 20px rgba(58, 134, 255, 0.3); }
+        #result { margin-top: 25px; text-align: left; background: var(--card-bg); padding: 25px; border-radius: 30px; display: none; border: 2px solid var(--soft-blue); line-height: 1.6; }
+        #result strong { color: #1b4332; background: var(--success-bg); padding: 2px 6px; border-radius: 6px; }
 
-        #result { margin-top: 25px; text-align: left; background: var(--card-bg); padding: 25px; border-radius: 30px; display: none; border: 2px solid var(--soft-blue); }
-
-        /* PRZYCISK KOPIOWANIA */
-        .copy-btn {
-            background: var(--soft-blue); color: white; border: none; padding: 8px 15px;
-            border-radius: 12px; cursor: pointer; font-size: 0.8rem; margin-top: 10px;
-            display: none; align-items: center; gap: 5px; transition: 0.3s;
-        }
-        .copy-btn:hover { opacity: 0.9; transform: scale(1.05); }
+        .copy-btn { background: var(--soft-blue); color: white; border: none; padding: 10px 20px; border-radius: 15px; cursor: pointer; font-size: 0.9rem; margin-top: 15px; display: none; align-items: center; gap: 8px; font-weight: bold; }
 
         .chat-box { display: none; margin-top: 20px; padding: 20px; background: rgba(58, 134, 255, 0.1); border-radius: 25px; text-align: left; }
+        .chat-input-group { display: flex; gap: 10px; margin-top: 10px; }
         .chat-input-group input { background: var(--card-bg); color: var(--text); border: 1px solid var(--soft-blue); flex: 1; padding: 12px; border-radius: 15px; outline: none; }
+        
+        .loader { display: none; margin: 20px auto; width: 30px; height: 30px; border: 4px solid #f3f3f3; border-top: 4px solid var(--soft-blue); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
 </head>
@@ -96,10 +84,10 @@
     <div class="history-sidebar" id="sidebar">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <h3 style="margin:0">⚙️ Opcje</h3>
-            <button onclick="toggleHistory()" style="background:none; border:none; color:var(--text); font-size:1.5rem; cursor:pointer">×</button>
+            <button onclick="toggleHistory()" style="background:none; border:none; color:var(--text); font-size:1.8rem; cursor:pointer">×</button>
         </div>
         
-        <p style="text-align:left; margin: 20px 0 5px; font-weight:bold">Tryb wyglądu:</p>
+        <p style="text-align:left; margin: 20px 0 5px; font-weight:bold">Wygląd:</p>
         <div class="theme-switcher">
             <button class="theme-btn" onclick="setTheme('light')">☀️ Jasny</button>
             <button class="theme-btn" onclick="setTheme('dark')">🌙 Ciemny</button>
@@ -110,46 +98,54 @@
     </div>
 
     <div class="container">
-        <button onclick="toggleHistory()" style="background:var(--card-bg); color:var(--text); border:2px solid var(--soft-blue); padding:10px 20px; border-radius:20px; font-weight:bold; cursor:pointer; margin-bottom:20px">
+        <button onclick="toggleHistory()" style="background:var(--card-bg); color:var(--text); border:2px solid var(--soft-blue); padding:10px 25px; border-radius:20px; font-weight:bold; cursor:pointer; margin-bottom:20px; transition: 0.3s;">
             ⚙️ Menu & Historia
         </button>
         
-        <h1 style="color:var(--soft-blue)">☁️ CLOUD AI ☁️</h1>
+        <h1>☁️ CLOUD AI ☁️</h1>
+        <p style="opacity: 0.8; margin-top: 5px;">TWÓJ POMOCNIK W SZKOLE!</p>
         
-        <span style="display:block; text-align:left; font-weight:bold; margin:20px 0 10px">Wybierz przedmiot:</span>
-        <div style="display:flex; gap:10px; flex-wrap:wrap">
+        <span class="section-title">Wybierz przedmiot:</span>
+        <div class="picker">
             <div class="card active" onclick="setVal('subject', 'matematyka', this)"><span>📐</span>Matma</div>
             <div class="card" onclick="setVal('subject', 'polski', this)"><span>📚</span>Polski</div>
             <div class="card" onclick="setVal('subject', 'fizyka', this)"><span>⚛️</span>Fizyka</div>
+            <div class="card" onclick="setVal('subject', 'inne', this)"><span>🌍</span>Inne</div>
+        </div>
+
+        <span class="section-title">Poziom szkoły:</span>
+        <div class="picker">
+            <div class="card active" onclick="setVal('level', 'liceum', this)">Liceum</div>
+            <div class="card" onclick="setVal('level', 'podstawowka', this)">Podstawówka</div>
         </div>
 
         <input type="hidden" id="subject" value="matematyka">
+        <input type="hidden" id="level" value="liceum">
 
         <div style="background:var(--card-bg); border:3px dashed var(--soft-blue); border-radius:30px; padding:35px; margin:25px 0; cursor:pointer; position:relative">
             <span style="font-size:2.5rem">📸</span>
-            <p id="fileName" style="margin:10px 0 0">Dodaj zdjęcie zadania</p>
+            <p id="fileName" style="margin:10px 0 0; font-weight: bold;">Dodaj zdjęcie zadania</p>
             <input type="file" id="imageInput" accept="image/*" style="position:absolute; width:100%; height:100%; top:0; left:0; opacity:0; cursor:pointer" onchange="document.getElementById('fileName').innerText = this.files[0].name">
         </div>
 
         <button class="solve-btn" id="solveBtn" onclick="solve()">ROZWIĄŻ ZADANIE</button>
+        <div class="loader" id="loader"></div>
 
         <div id="result"></div>
-        <button id="copyBtn" class="copy-btn" onclick="copyResult()">
-            <span>📋</span> Kopiuj do schowka
-        </button>
+        <button id="copyBtn" class="copy-btn" onclick="copyResult()">📋 Kopiuj wynik</button>
 
         <div class="chat-box" id="chatSection">
-            <strong>💬 Masz pytanie?</strong>
-            <div style="display:flex; gap:10px; margin-top:10px">
-                <input type="text" id="chatInput" placeholder="Np. Wyjaśnij to...">
-                <button onclick="askChat()" style="background:var(--soft-blue); color:white; border:none; padding:10px 20px; border-radius:15px; cursor:pointer">Pytaj</button>
+            <strong style="font-size: 0.9rem;">💬 Masz pytanie do rozwiązania?</strong>
+            <div class="chat-input-group">
+                <input type="text" id="chatInput" placeholder="Np. Skąd się wziął ten wzór?">
+                <button onclick="askChat()" style="background:var(--soft-blue); color:white; border:none; padding:10px 15px; border-radius:15px; cursor:pointer; font-weight:bold">Pytaj</button>
             </div>
-            <div id="chatResponse" style="margin-top:15px; border-left:3px solid var(--soft-blue); padding-left:10px"></div>
+            <div id="chatResponse" style="margin-top:15px; border-left:3px solid var(--soft-blue); padding-left:10px; font-size: 0.95rem;"></div>
         </div>
 
-        <div style="margin-top:30px; opacity:0.7">
+        <div style="margin-top:35px; padding-top: 15px; border-top: 1px dashed var(--soft-blue); opacity:0.8">
             <small style="color:var(--soft-blue); font-weight:bold">🎧 SPOFY PLAYER</small>
-            <audio controls style="width:100%; height:25px; filter: hue-rotate(180deg); margin-top:10px">
+            <audio controls style="width:100%; height:30px; filter: hue-rotate(180deg); margin-top:10px">
                 <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
             </audio>
         </div>
@@ -161,22 +157,18 @@
             document.documentElement.setAttribute('data-theme', theme);
             localStorage.setItem('cloudSolveTheme', theme);
         }
-        // Inicjalizacja motywu
-        const savedTheme = localStorage.getItem('cloudSolveTheme') || 'light';
-        setTheme(savedTheme);
+        setTheme(localStorage.getItem('cloudSolveTheme') || 'light');
 
         // KOPIOWANIE
         function copyResult() {
             const text = document.getElementById('result').innerText;
             navigator.clipboard.writeText(text).then(() => {
                 const btn = document.getElementById('copyBtn');
-                const originalText = btn.innerHTML;
-                btn.innerHTML = "✅ Skopiowano!";
-                setTimeout(() => btn.innerHTML = originalText, 2000);
+                btn.innerText = "✅ Skopiowano!";
+                setTimeout(() => btn.innerText = "📋 Kopiuj wynik", 2000);
             });
         }
 
-        // RESZTA FUNKCJI (Logika bez zmian, dodane wywołania history i copy)
         function toggleHistory() { document.getElementById('sidebar').classList.toggle('active'); loadHistory(); }
         
         function setVal(id, val, el) {
@@ -187,18 +179,19 @@
 
         async function solve() {
             const fileInput = document.getElementById('imageInput');
-            if (!fileInput.files[0]) return alert("Wgraj zdjęcie!");
+            if (!fileInput.files[0]) return alert("Wgraj zdjęcie! 📸");
             
             const btn = document.getElementById('solveBtn');
+            const loader = document.getElementById('loader');
             const resDiv = document.getElementById('result');
             const copyBtn = document.getElementById('copyBtn');
 
-            btn.disabled = true; btn.innerText = "Chmurka myśli... ☁️";
+            btn.disabled = true; loader.style.display = 'block'; resDiv.style.display = 'none'; copyBtn.style.display = 'none';
 
             const formData = new FormData();
             formData.append('image', fileInput.files[0]);
             formData.append('subject', document.getElementById('subject').value);
-            formData.append('level', 'liceum');
+            formData.append('level', document.getElementById('level').value);
 
             try {
                 const response = await fetch('/solve', { method: 'POST', body: formData });
@@ -209,21 +202,21 @@
                 document.getElementById('chatSection').style.display = 'block';
                 if (window.MathJax) MathJax.typesetPromise([resDiv]);
                 
-                // Zapis do historii
                 let history = JSON.parse(localStorage.getItem('cloudSolveHistory') || '[]');
                 history.unshift({ id: Date.now(), date: new Date().toLocaleString(), subject: document.getElementById('subject').value, content: data.result });
                 localStorage.setItem('cloudSolveHistory', JSON.stringify(history.slice(0, 10)));
-            } catch (err) { alert("Błąd serwera"); }
-            finally { btn.disabled = false; btn.innerText = "ROZWIĄŻ ZADANIE"; }
+            } catch (err) { alert("Błąd połączenia z serwerem."); }
+            finally { btn.disabled = false; loader.style.display = 'none'; }
         }
 
         function loadHistory() {
             const history = JSON.parse(localStorage.getItem('cloudSolveHistory') || '[]');
             const list = document.getElementById('historyList');
+            const icons = { matematyka: '📐', polski: '📚', fizyka: '⚛️', inne: '🌍' };
             list.innerHTML = history.map(item => `
-                <div onclick="viewHistoryItem(${item.id})" style="background:var(--card-bg); padding:10px; margin-bottom:10px; border-radius:15px; cursor:pointer; text-align:left; border:1px solid var(--soft-blue)">
-                    <strong>${item.subject}</strong><br><small>${item.date}</small>
-                </div>`).join('') || '<p>Brak skanów</p>';
+                <div onclick="viewHistoryItem(${item.id})" style="background:var(--card-bg); padding:12px; margin-bottom:10px; border-radius:15px; cursor:pointer; text-align:left; border:1px solid var(--soft-blue); font-size: 0.85rem;">
+                    <span>${icons[item.subject] || '❓'}</span> <strong>${item.subject.toUpperCase()}</strong><br><small>${item.date}</small>
+                </div>`).join('') || '<p>Brak skanów.</p>';
         }
 
         function viewHistoryItem(id) {
@@ -241,7 +234,7 @@
             const question = document.getElementById('chatInput').value;
             const resp = document.getElementById('chatResponse');
             if(!question) return;
-            resp.innerText = "Piszę... ☁️";
+            resp.innerText = "Chmurka myśli... ☁️";
             const res = await fetch('/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
