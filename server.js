@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const OpenAI = require("openai");
+const OpenAI = require("openai"); // Używamy tej biblioteki do obsługi Groka
 
 if (process.env.NODE_ENV !== 'production') {
     require('dotenv').config();
@@ -21,8 +21,7 @@ const geminiKeys = [
 
 let currentGeminiIndex = 0;
 
-// Inicjalizacja OpenAI i Groka (używamy tej samej biblioteki, bo są kompatybilne)
-const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
+// Konfiguracja Groka (xAI) - podstawiamy go jako jedyny Plan B
 const grok = process.env.XAI_API_KEY ? new OpenAI({ 
     apiKey: process.env.XAI_API_KEY, 
     baseURL: "https://api.x.ai/v1" 
@@ -32,7 +31,7 @@ app.use(express.static('public'));
 
 // --- LOGIKA ROTACJI GEMINI ---
 async function tryGemini(prompt, fileData, attempt = 0) {
-    if (attempt >= geminiKeys.length) throw new Error("Wszystkie Gemini padły.");
+    if (attempt >= geminiKeys.length) throw new Error("Wszystkie klucze Gemini są zajęte.");
     
     const genAI = new GoogleGenerativeAI(geminiKeys[currentGeminiIndex].trim());
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash", apiVersion: "v1beta" });
@@ -40,9 +39,11 @@ async function tryGemini(prompt, fileData, attempt = 0) {
     try {
         console.log(`[Gemini] Próba kluczem nr ${currentGeminiIndex + 1}...`);
         const result = await model.generateContent([prompt, fileData]);
-        return (await result.response).text();
+        const response = await result.response;
+        return response.text();
     } catch (error) {
-        if (error.status === 429) {
+        if (error.status === 429 || error.message.includes('429')) {
+            console.log(`⚠️ Gemini ${currentGeminiIndex + 1} zablokowane. Przełączam...`);
             currentGeminiIndex = (currentGeminiIndex + 1) % geminiKeys.length;
             return tryGemini(prompt, fileData, attempt + 1);
         }
@@ -61,45 +62,48 @@ app.post('/solve', upload.single('image'), async (req, res) => {
 
         const finalPrompt = `Jesteś ekspertem (${subject}). Poziom: ${level}. 
         Tryb: ${mode === 'cheat' ? 'Same obliczenia i pogrubiony wynik.' : 'Wyjaśnij krok po kroku.'}
-        ZASADY: Wzory w $...$, wynik końcowy w **$...$**. Pisz po polsku.`;
+        ZASADY: Wzory matematyczne w $...$, wynik końcowy zawsze w **$...$**. Pisz po polsku.`;
 
         // 1. NAJPIERW GEMINI (Darmowe)
         try {
-            const result = await tryGemini(finalPrompt, { inlineData: { data: base64Data, mimeType } });
+            const result = await tryGemini(finalPrompt, { 
+                inlineData: { data: base64Data, mimeType } 
+            });
             return res.json({ result });
         } catch (e) {
-            console.log("❌ Gemini padło. Próba OpenAI...");
+            console.log("❌ Wszystkie Gemini padły. Przełączam na GROK (xAI)...");
         }
 
-        // 2. POTEM OPENAI (Płatne, Plan B)
-        if (openai) {
-            try {
-                const response = await openai.chat.completions.create({
-                    model: "gpt-4o",
-                    messages: [{ role: "user", content: [{ type: "text", text: finalPrompt }, { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Data}` } }] }]
-                });
-                return res.json({ result: response.choices[0].message.content });
-            } catch (e) {
-                console.log("❌ OpenAI padło. Próba Grok...");
-            }
-        }
-
-        // 3. NA KOŃCU GROK (Płatne, Plan C)
+        // 2. JEŚLI GEMINI PADŁO -> OD RAZU GROK (xAI)
         if (grok) {
             try {
                 const response = await grok.chat.completions.create({
                     model: "grok-2-vision-1212",
-                    messages: [{ role: "user", content: [{ type: "text", text: finalPrompt }, { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Data}` } }] }]
+                    messages: [
+                        {
+                            role: "user",
+                            content: [
+                                { type: "text", text: finalPrompt },
+                                {
+                                    type: "image_url",
+                                    image_url: { url: `data:${mimeType};base64,${base64Data}` }
+                                }
+                            ]
+                        }
+                    ]
                 });
+                console.log("✅ Zadanie rozwiązane przez Groka!");
                 return res.json({ result: response.choices[0].message.content });
-            } catch (e) {
-                console.error("❌ Grok też zawiódł:", e.message);
+            } catch (grokError) {
+                console.error("❌ Błąd Groka:", grokError.message);
+                throw new Error("Obecnie wszystkie systemy (Gemini i Grok) są przeciążone. Spróbuj za chwilę.");
             }
+        } else {
+            throw new Error("Gemini nie działa, a klucz XAI_API_KEY nie został skonfigurowany.");
         }
 
-        throw new Error("Wszystkie systemy AI (Gemini, OpenAI, Grok) są obecnie niedostępne. 🛑");
-
     } catch (error) {
+        console.error("Błąd serwera:", error.message);
         res.status(500).json({ error: error.message });
     }
 });
@@ -112,9 +116,13 @@ app.post('/chat', async (req, res) => {
         const result = await model.generateContent(`Kontekst: ${context}. Pytanie: ${question}`);
         res.json({ answer: (await result.response).text() });
     } catch (error) {
-        res.status(500).json({ error: "Czat tymczasowo wyłączony." });
+        res.status(500).json({ error: "Czat tymczasowo niedostępny." });
     }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 System Multi-AI (Gemini/OpenAI/Grok) działa!`));
+app.listen(PORT, () => {
+    console.log(`🚀 Serwer Multi-AI (Gemini + Grok) gotowy!`);
+    console.log(`Aktywne klucze Gemini: ${geminiKeys.length}`);
+    console.log(`Status Groka: ${grok ? "Podłączony" : "Brak klucza"}`);
+});
