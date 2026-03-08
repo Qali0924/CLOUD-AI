@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const OpenAI = require("openai"); // Używamy tej biblioteki do obsługi Groka
+const OpenAI = require("openai");
 
 if (process.env.NODE_ENV !== 'production') {
     require('dotenv').config();
@@ -11,7 +11,7 @@ const app = express();
 app.use(express.json());
 const upload = multer({ storage: multer.memoryStorage() });
 
-// --- KONFIGURACJA KLUCZY ---
+// --- KONFIGURACJA KLUCZY GEMINI ---
 const geminiKeys = [
     process.env.GEMINI_KEY_1,
     process.env.GEMINI_KEY_2,
@@ -21,7 +21,7 @@ const geminiKeys = [
 
 let currentGeminiIndex = 0;
 
-// Konfiguracja Groka (xAI) - podstawiamy go jako jedyny Plan B
+// --- KONFIGURACJA GROK (xAI) ---
 const grok = process.env.XAI_API_KEY ? new OpenAI({ 
     apiKey: process.env.XAI_API_KEY, 
     baseURL: "https://api.x.ai/v1" 
@@ -29,9 +29,9 @@ const grok = process.env.XAI_API_KEY ? new OpenAI({
 
 app.use(express.static('public'));
 
-// --- LOGIKA ROTACJI GEMINI ---
+// --- FUNKCJA ROTACJI GEMINI ---
 async function tryGemini(prompt, fileData, attempt = 0) {
-    if (attempt >= geminiKeys.length) throw new Error("Wszystkie klucze Gemini są zajęte.");
+    if (attempt >= geminiKeys.length) throw new Error("Wszystkie Gemini zajęte.");
     
     const genAI = new GoogleGenerativeAI(geminiKeys[currentGeminiIndex].trim());
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash", apiVersion: "v1beta" });
@@ -43,7 +43,7 @@ async function tryGemini(prompt, fileData, attempt = 0) {
         return response.text();
     } catch (error) {
         if (error.status === 429 || error.message.includes('429')) {
-            console.log(`⚠️ Gemini ${currentGeminiIndex + 1} zablokowane. Przełączam...`);
+            console.log(`⚠️ Gemini ${currentGeminiIndex + 1} Limit. Skok na następny...`);
             currentGeminiIndex = (currentGeminiIndex + 1) % geminiKeys.length;
             return tryGemini(prompt, fileData, attempt + 1);
         }
@@ -64,21 +64,21 @@ app.post('/solve', upload.single('image'), async (req, res) => {
         Tryb: ${mode === 'cheat' ? 'Same obliczenia i pogrubiony wynik.' : 'Wyjaśnij krok po kroku.'}
         ZASADY: Wzory matematyczne w $...$, wynik końcowy zawsze w **$...$**. Pisz po polsku.`;
 
-        // 1. NAJPIERW GEMINI (Darmowe)
+        // 1. NAJPIERW GEMINI (Próba wszystkich 4 kluczy)
         try {
             const result = await tryGemini(finalPrompt, { 
                 inlineData: { data: base64Data, mimeType } 
             });
             return res.json({ result });
         } catch (e) {
-            console.log("❌ Wszystkie Gemini padły. Przełączam na GROK (xAI)...");
+            console.log("❌ Wszystkie Gemini padły. Odpalam Plan B: GROK-4...");
         }
 
-        // 2. JEŚLI GEMINI PADŁO -> OD RAZU GROK (xAI)
+        // 2. JEŚLI GEMINI PADŁO -> UŻYJ GROK-4
         if (grok) {
             try {
                 const response = await grok.chat.completions.create({
-                    model: "grok-2-vision-1212",
+                    model: "grok-4-latest", // Najnowszy model z Twojej dokumentacji
                     messages: [
                         {
                             role: "user",
@@ -96,10 +96,10 @@ app.post('/solve', upload.single('image'), async (req, res) => {
                 return res.json({ result: response.choices[0].message.content });
             } catch (grokError) {
                 console.error("❌ Błąd Groka:", grokError.message);
-                throw new Error("Obecnie wszystkie systemy (Gemini i Grok) są przeciążone. Spróbuj za chwilę.");
+                throw new Error("Grok zwrócił błąd: " + grokError.message);
             }
         } else {
-            throw new Error("Gemini nie działa, a klucz XAI_API_KEY nie został skonfigurowany.");
+            throw new Error("Brak dostępnych systemów AI (Gemini padło, a Grok nie jest skonfigurowany).");
         }
 
     } catch (error) {
@@ -122,7 +122,6 @@ app.post('/chat', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`🚀 Serwer Multi-AI (Gemini + Grok) gotowy!`);
-    console.log(`Aktywne klucze Gemini: ${geminiKeys.length}`);
-    console.log(`Status Groka: ${grok ? "Podłączony" : "Brak klucza"}`);
+    console.log(`🚀 Serwer SPOFY Multi-AI aktywny!`);
+    console.log(`Gemini: ${geminiKeys.length} klucze | Grok: ${grok ? "Gotowy" : "Brak klucza"}`);
 });
