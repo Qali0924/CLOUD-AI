@@ -72,7 +72,7 @@ app.post('/solve', upload.single('image'), async (req, res) => {
 app.post('/chat', async (req, res) => {
     try {
         const { question, context } = req.body;
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const prompt = `Uczeń otrzymał rozwiązanie: "${context}". Teraz pyta: "${question}". Odpowiedz krótko i jasno. Używaj $...$ do wzorów.`;
         const result = await model.generateContent(prompt);
         res.json({ answer: result.response.text() });
@@ -83,4 +83,5 @@ app.post('/chat', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Serwer śmiga na porcie ${PORT}`));
+
 
