@@ -6,15 +6,14 @@
     <title>ClOUD AI | TWÓJ INNOWACYJNY POMOCNIK!</title>
     
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script>
-        window.MathJax = { tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] } };
-    </script>
+    <script>window.MathJax = { tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] } };</script>
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 
     <style>
         :root {
             --sky: #a3e0f9; --soft-blue: #3a86ff; --dark: #023e8a;
             --glass: rgba(255, 255, 255, 0.75); --white: #ffffff;
+            --success: #1b4332; --success-bg: #d8f3dc;
         }
 
         body { 
@@ -30,67 +29,70 @@
         .c1 { width: 300px; height: 100px; top: 10%; animation-duration: 45s; }
         .c2 { width: 250px; height: 80px; top: 70%; animation-duration: 35s; left: -250px; }
 
-        /* SIDEBAR HISTORII */
-        .history-sidebar {
-            position: fixed; left: -280px; top: 0; width: 260px; height: 100%;
-            background: var(--white); box-shadow: 5px 0 15px rgba(0,0,0,0.1);
-            transition: 0.3s; z-index: 100; padding: 20px; overflow-y: auto;
-        }
-        .history-sidebar.active { left: 0; }
-        .history-item { 
-            padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 0.85rem; 
-            transition: 0.2s; border-radius: 10px; margin-bottom: 5px;
-        }
-        .history-item:hover { background: #f0f7ff; color: var(--soft-blue); }
-        .toggle-history {
-            position: fixed; left: 10px; top: 10px; z-index: 101;
-            background: var(--soft-blue); color: white; border: none;
-            padding: 10px 15px; border-radius: 50px; cursor: pointer;
-        }
-
         .container { 
             background: var(--glass); backdrop-filter: blur(20px);
             padding: 30px; border-radius: 40px; box-shadow: 0 20px 50px rgba(0,0,0,0.1);
             max-width: 650px; width: 100%; border: 2px solid white; text-align: center;
+            position: relative;
         }
 
-        h1 { color: var(--soft-blue); margin: 0; font-size: 2.8rem; text-shadow: 2px 2px white; }
-        .tagline { color: var(--dark); opacity: 0.8; margin-bottom: 25px; }
+        /* PRZYCISK HISTORII */
+        .history-trigger {
+            background: white; color: var(--soft-blue); border: 2px solid var(--soft-blue);
+            padding: 10px 20px; border-radius: 20px; font-weight: bold; cursor: pointer;
+            display: flex; align-items: center; gap: 8px; margin: 0 auto 20px; transition: 0.3s;
+        }
+        .history-trigger:hover { background: var(--soft-blue); color: white; transform: translateY(-2px); }
 
-        .section-title { font-weight: bold; color: var(--dark); display: block; margin: 15px 0 10px; text-align: left; }
+        /* SIDEBAR HISTORII (PRAWY) */
+        .history-sidebar {
+            position: fixed; right: -320px; top: 0; width: 300px; height: 100%;
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(15px);
+            box-shadow: -10px 0 30px rgba(0,0,0,0.1); transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1000; padding: 30px 20px; border-left: 1px solid white; overflow-y: auto;
+        }
+        .history-sidebar.active { right: 0; }
+        .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--sky); padding-bottom: 10px; }
+        .close-history { background: none; border: none; font-size: 1.5rem; cursor: pointer; }
+
+        .history-item {
+            background: white; padding: 12px; border-radius: 18px; margin-bottom: 10px;
+            cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 12px; border: 1px solid #eee;
+        }
+        .history-item:hover { transform: translateX(-5px); border-color: var(--soft-blue); }
+        .h-icon { font-size: 1.3rem; background: var(--sky); width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; border-radius: 10px; }
+
+        h1 { color: var(--soft-blue); margin: 0; font-size: 2.8rem; }
+        .section-title { font-weight: bold; color: var(--dark); display: block; margin: 20px 0 10px; text-align: left; }
+        
+        /* PICKERS */
         .picker { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
         .card { 
             background: white; padding: 12px; border-radius: 20px; cursor: pointer;
             border: 3px solid transparent; transition: 0.3s; flex: 1; min-width: 80px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
         }
-        .card.active { border-color: var(--soft-blue); transform: translateY(-3px); background: #f0f7ff; }
-        .card span { font-size: 1.5rem; display: block; }
+        .card.active { border-color: var(--soft-blue); background: #f0f7ff; }
 
+        /* UPLOAD */
         .upload-area {
             background: white; border: 3px dashed var(--sky); border-radius: 30px;
-            padding: 35px; margin: 25px 0; cursor: pointer; position: relative; transition: 0.3s;
+            padding: 35px; margin: 25px 0; cursor: pointer; position: relative;
         }
-        .upload-area:hover { border-color: var(--soft-blue); background: #fafafa; }
         .upload-area input { position: absolute; width: 100%; height: 100%; top: 0; left: 0; opacity: 0; cursor: pointer; }
 
         .solve-btn {
             background: linear-gradient(135deg, var(--soft-blue), var(--dark));
             color: white; border: none; padding: 18px; border-radius: 50px;
             font-size: 1.2rem; font-weight: bold; cursor: pointer; width: 100%;
-            box-shadow: 0 10px 25px rgba(58, 134, 255, 0.4); transition: 0.3s;
         }
 
         #result { 
             margin-top: 25px; text-align: left; background: white; padding: 25px;
-            border-radius: 30px; display: none; border: 2px solid var(--sky); line-height: 1.6;
+            border-radius: 30px; display: none; border: 2px solid var(--sky);
         }
-        #result strong { color: #1b4332; background: #d8f3dc; padding: 2px 6px; border-radius: 6px; }
+        #result strong { color: var(--success); background: var(--success-bg); padding: 2px 6px; border-radius: 6px; }
 
-        .chat-box {
-            display: none; margin-top: 20px; padding: 20px; background: rgba(58, 134, 255, 0.1);
-            border-radius: 25px; text-align: left;
-        }
+        .chat-box { display: none; margin-top: 20px; padding: 20px; background: rgba(58, 134, 255, 0.1); border-radius: 25px; text-align: left; }
         .chat-input-group { display: flex; gap: 10px; margin-top: 10px; }
         .chat-input-group input { flex: 1; padding: 12px; border-radius: 15px; border: 1px solid var(--sky); outline: none; }
         .chat-input-group button { background: var(--soft-blue); color: white; border: none; padding: 10px 20px; border-radius: 15px; cursor: pointer; }
@@ -103,23 +105,32 @@
 <body>
     <div class="sky-bg"><div class="cloud c1"></div><div class="cloud c2"></div></div>
 
-    <button class="toggle-history" onclick="document.getElementById('sidebar').classList.toggle('active')">🕒 Historia</button>
-
     <div class="history-sidebar" id="sidebar">
-        <h3 style="color: var(--soft-blue);">Twoje Skany</h3>
+        <div class="history-header">
+            <h3>🕒 Twoja Historia</h3>
+            <button class="close-history" onclick="toggleHistory()">×</button>
+        </div>
         <div id="historyList"></div>
     </div>
 
     <div class="container">
+        <button class="history-trigger" onclick="toggleHistory()"><span>🕒</span> Ostatnie skany</button>
+        
         <h1>☁️ ClOUD AI ☁️</h1>
-        <p class="tagline">TWÓJ INTELIGENTNY POMOCNIK W SZKOLE!</p>
+        <p style="color:var(--dark); opacity:0.8">TWÓJ INTELIGENTNY POMOCNIK W SZKOLE!</p>
 
-        <span class="section-title">Co rozwiązujemy?</span>
+        <span class="section-title">Wybierz przedmiot:</span>
         <div class="picker">
             <div class="card active" onclick="setVal('subject', 'matematyka', this)"><span>📐</span>Matma</div>
             <div class="card" onclick="setVal('subject', 'polski', this)"><span>📚</span>Polski</div>
             <div class="card" onclick="setVal('subject', 'fizyka', this)"><span>⚛️</span>Fizyka</div>
             <div class="card" onclick="setVal('subject', 'inne', this)"><span>🌍</span>Inne</div>
+        </div>
+
+        <span class="section-title">Poziom:</span>
+        <div class="picker">
+            <div class="card active" onclick="setVal('level', 'liceum', this)">Liceum</div>
+            <div class="card" onclick="setVal('level', 'podstawowka', this)">Podstawówka</div>
         </div>
 
         <input type="hidden" id="subject" value="matematyka">
@@ -137,63 +148,51 @@
         <div id="result"></div>
 
         <div class="chat-box" id="chatSection">
-            <strong>💬 Masz pytanie do tego zadania?</strong>
+            <strong>💬 Masz pytanie do zadania?</strong>
             <div class="chat-input-group">
-                <input type="text" id="chatInput" placeholder="Np. Wyjaśnij krok po kroku...">
+                <input type="text" id="chatInput" placeholder="Np. Skąd ten wynik?">
                 <button onclick="askChat()">Pytaj</button>
             </div>
             <div id="chatResponse" style="margin-top: 15px; border-left: 3px solid var(--soft-blue); padding-left: 10px;"></div>
         </div>
 
-        <div style="margin-top:30px; padding-top:15px; border-top: 1px dashed var(--soft-blue); opacity:0.7">
+        <div style="margin-top:30px; opacity:0.7">
             <small style="color:var(--soft-blue); font-weight:bold">🎧 SPOFY PLAYER</small>
-            <audio controls style="width:100%; height:25px; filter: hue-rotate(180deg); margin-top:5px">
+            <audio controls style="width:100%; height:25px; filter: hue-rotate(180deg); margin-top:10px">
                 <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
             </audio>
         </div>
     </div>
 
     <script>
-        // Funkcje obsługi Historii
+        function toggleHistory() { document.getElementById('sidebar').classList.toggle('active'); loadHistory(); }
+
         function saveToHistory(subject, text) {
             let history = JSON.parse(localStorage.getItem('cloudSolveHistory') || '[]');
-            const newItem = {
-                id: Date.now(),
-                date: new Date().toLocaleString(),
-                subject: subject,
-                content: text
-            };
-            history.unshift(newItem);
-            localStorage.setItem('cloudSolveHistory', JSON.stringify(history.slice(0, 10))); // Trzymaj 10 ostatnich
-            loadHistory();
+            history.unshift({ id: Date.now(), date: new Date().toLocaleString(), subject, content: text });
+            localStorage.setItem('cloudSolveHistory', JSON.stringify(history.slice(0, 10)));
         }
 
         function loadHistory() {
             const history = JSON.parse(localStorage.getItem('cloudSolveHistory') || '[]');
             const list = document.getElementById('historyList');
-            list.innerHTML = history.map(item => `
+            const icons = { matematyka: '📐', polski: '📚', fizyka: '⚛️', inne: '🌍' };
+            list.innerHTML = history.length ? history.map(item => `
                 <div class="history-item" onclick="viewHistoryItem(${item.id})">
-                    <strong>${item.subject.toUpperCase()}</strong><br>
-                    <small>${item.date}</small>
-                </div>
-            `).join('');
+                    <div class="h-icon">${icons[item.subject] || '❓'}</div>
+                    <div style="text-align:left"><strong>${item.subject}</strong><br><small>${item.date.split(',')[0]}</small></div>
+                </div>`).join('') : '<p>Brak skanów ☁️</p>';
         }
 
         function viewHistoryItem(id) {
-            const history = JSON.parse(localStorage.getItem('cloudSolveHistory') || '[]');
-            const item = history.find(i => i.id === id);
-            if (item) {
-                const resDiv = document.getElementById('result');
-                resDiv.innerHTML = marked.parse(item.content);
-                resDiv.style.display = 'block';
-                document.getElementById('chatSection').style.display = 'block';
-                if (window.MathJax) MathJax.typesetPromise([resDiv]);
-                document.getElementById('sidebar').classList.remove('active');
-            }
+            const item = JSON.parse(localStorage.getItem('cloudSolveHistory')).find(i => i.id === id);
+            const resDiv = document.getElementById('result');
+            resDiv.innerHTML = marked.parse(item.content);
+            resDiv.style.display = 'block';
+            document.getElementById('chatSection').style.display = 'block';
+            if (window.MathJax) MathJax.typesetPromise([resDiv]);
+            toggleHistory();
         }
-
-        // Inicjalizacja historii przy starcie
-        window.onload = loadHistory;
 
         function setVal(id, val, el) {
             document.getElementById(id).value = val;
@@ -203,14 +202,13 @@
 
         async function solve() {
             const fileInput = document.getElementById('imageInput');
-            const resDiv = document.getElementById('result');
-            const loader = document.getElementById('loader');
+            if (!fileInput.files[0]) return alert("Wgraj zdjęcie!");
+            
             const btn = document.getElementById('solveBtn');
-
-            if (!fileInput.files[0]) return alert("Gdzie zdjęcie? ☁️");
+            const loader = document.getElementById('loader');
+            const resDiv = document.getElementById('result');
 
             btn.disabled = true; loader.style.display = 'block'; resDiv.style.display = 'none';
-            document.getElementById('chatSection').style.display = 'none';
 
             const formData = new FormData();
             formData.append('image', fileInput.files[0]);
@@ -224,27 +222,22 @@
                 resDiv.style.display = 'block';
                 document.getElementById('chatSection').style.display = 'block';
                 if (window.MathJax) MathJax.typesetPromise([resDiv]);
-                
-                // Zapisz do historii
                 saveToHistory(document.getElementById('subject').value, data.result);
-
-            } catch (err) { alert("Błąd! 😥"); }
+            } catch (err) { alert("Błąd serwera"); }
             finally { btn.disabled = false; loader.style.display = 'none'; }
         }
 
         async function askChat() {
             const question = document.getElementById('chatInput').value;
             const resp = document.getElementById('chatResponse');
-            const context = document.getElementById('result').innerText;
             if(!question) return;
-
-            resp.innerText = "Chmurka myśli... ☁️";
-            const response = await fetch('/chat', {
+            resp.innerText = "Piszę... ☁️";
+            const res = await fetch('/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ question, context })
+                body: JSON.stringify({ question, context: document.getElementById('result').innerText })
             });
-            const data = await response.json();
+            const data = await res.json();
             resp.innerHTML = marked.parse(data.answer);
             if (window.MathJax) MathJax.typesetPromise([resp]);
         }
