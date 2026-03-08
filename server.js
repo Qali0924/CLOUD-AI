@@ -10,63 +10,52 @@ const app = express();
 app.use(express.json());
 const upload = multer({ storage: multer.memoryStorage() });
 
-// --- DIAGNOSTYKA STARTU ---
-// Te logi pojawią się w czarnym oknie Rendera zaraz po starcie
-console.log("=== DIAGNOSTYKA KLUCZY ===");
-console.log("Klucz 1 (pierwsze 4 znaki):", process.env.GEMINI_KEY_1 ? process.env.GEMINI_KEY_1.substring(0, 4) : "BRAK!");
-console.log("Klucz 2 (pierwsze 4 znaki):", process.env.GEMINI_KEY_2 ? process.env.GEMINI_KEY_2.substring(0, 4) : "BRAK!");
-
+// LISTA 4 KLUCZY Z TWOICH 2 KONT (PO 2 PROJEKTY NA KONTO)
 const apiKeys = [
     process.env.GEMINI_KEY_1,
-    process.env.GEMINI_KEY_2
-].filter(key => key && key.trim().length > 0);
-
-if (apiKeys.length === 0) {
-    console.error("❌ BŁĄD KRYTYCZNY: Nie znaleziono żadnych kluczy API w Environment!");
-} else {
-    console.log(`✅ Załadowano pomyślnie ${apiKeys.length} kluczy.`);
-}
+    process.env.GEMINI_KEY_2,
+    process.env.GEMINI_KEY_3,
+    process.env.GEMINI_KEY_4
+].filter(key => key && key.trim() !== "");
 
 let currentKeyIndex = 0;
 
 app.use(express.static('public'));
 
-// FUNKCJA ROTACJI
+// GŁÓWNA FUNKCJA ROTACJI - PRÓBUJE KAŻDEGO KLUCZA PO KOLEI
 async function generateWithRotation(prompt, fileData, attempt = 0) {
     if (apiKeys.length === 0) {
-        throw new Error("Serwer nie posiada skonfigurowanych kluczy API.");
+        throw new Error("Błąd: Nie skonfigurowałeś kluczy API w panelu Render! 🔑");
     }
 
+    // Jeśli sprawdziliśmy już wszystkie dostępne klucze i każdy rzucił błędem
     if (attempt >= apiKeys.length) {
-        throw new Error("Oba klucze są przeciążone. Odczekaj 60 sekund i spróbuj ponownie! ⏳");
+        throw new Error("Wszystkie darmowe limity wyczerpane. Odczekaj 60 sekund i spróbuj ponownie! ⏳");
     }
 
-    const currentKey = apiKeys[currentKeyIndex].trim(); // Trim usuwa przypadkowe spacje
+    const currentKey = apiKeys[currentKeyIndex].trim();
     const genAI = new GoogleGenerativeAI(currentKey);
     
-    // Używamy modelu 2.0 Flash z v1beta
+    // Model Gemini 2.0 Flash
     const model = genAI.getGenerativeModel({ 
         model: "gemini-2.0-flash", 
         apiVersion: "v1beta" 
     });
 
     try {
+        console.log(`[Log] Próba wykonania zadania kluczem nr ${currentKeyIndex + 1}...`);
         const result = await model.generateContent([prompt, fileData]);
         const response = await result.response;
         return response.text();
     } catch (error) {
-        // Obsługa limitu 429
+        // Jeśli błąd to 429 (Too Many Requests), zmień klucz
         if (error.status === 429 || (error.message && error.message.includes('429'))) {
-            console.log(`⚠️ Klucz ${currentKeyIndex + 1} wyczerpał limit. Przełączam na zapasowy...`);
+            console.log(`⚠️ Klucz ${currentKeyIndex + 1} zajęty (Limit 429). Przełączam na następny...`);
             currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
             return generateWithRotation(prompt, fileData, attempt + 1);
         }
         
-        // Jeśli błąd to 404, prawdopodobnie biblioteka w package.json jest za stara
-        if (error.status === 404) {
-            throw new Error("Błąd 404: Model 2.0 nieosiągalny. Sprawdź wersję @google/generative-ai w package.json!");
-        }
-        
+        // Inne błędy (np. błąd obrazka) wyrzucamy do konsoli
         throw error;
     }
 }
@@ -97,6 +86,7 @@ app.post('/solve', upload.single('image'), async (req, res) => {
         ${styleInstruction}
         ZASADY: Wzory w $...$, wynik końcowy w **$...$**. Pisz po polsku.`;
 
+        // Wywołanie z rotacją
         const text = await generateWithRotation(finalPrompt, fileData);
         res.json({ result: text });
 
@@ -114,7 +104,7 @@ app.post('/chat', async (req, res) => {
         const genAI = new GoogleGenerativeAI(apiKeys[currentKeyIndex]);
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash", apiVersion: "v1beta" });
         
-        const prompt = `Uczeń otrzymał rozwiązanie: "${context}". Teraz pyta: "${question}". Odpowiedz krótko. Wzory w $...$.`;
+        const prompt = `Uczeń pyta: "${question}" na podstawie: "${context}". Odpowiedz krótko.`;
         const result = await model.generateContent(prompt);
         res.json({ answer: result.response.text() });
     } catch (error) {
@@ -123,4 +113,7 @@ app.post('/chat', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Serwer aktywny na porcie ${PORT}. Klucze: ${apiKeys.length}`));
+app.listen(PORT, () => {
+    console.log(`🚀 Serwer SPOFY aktywny!`);
+    console.log(`Załadowano kluczy: ${apiKeys.length}`);
+});
