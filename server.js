@@ -1,7 +1,11 @@
 const express = require('express');
 const multer = require('multer');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-require('dotenv').config();
+
+// Ładujemy dotenv tylko lokalnie
+if (process.env.NODE_ENV !== 'production') {
+    require('dotenv').config();
+}
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -13,33 +17,36 @@ app.post('/solve', upload.single('image'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: "Wgraj zdjęcie!" });
 
+        const { level, subject } = req.body;
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-        
-// ... fragment wewnątrz app.post('/solve') ...
-const prompt = `Jesteś ekspertem matematycznym. Rozwiąż zadanie ze zdjęcia.
-ZASADY FORMATOWANIA:
-1. Każdy wzór, liczbę z pierwiastkiem lub potęgę bierz w znaki dolara, np. $2+2=4$.
-2. NAJWAŻNIEJSZE WYNIKI (kroki przejściowe i wynik końcowy) zapisuj wewnątrz podwójnych gwiazdek i dolarów, np. **$wynik$**.
-3. Pisz czytelnie, krok po kroku. Używaj zielonych akcentów w opisie (instrukcja dla CSS).`;
-// ... reszta kodu ...
+
+        // Personalizacja zachowania AI pod przedmiot
+        const prompts = {
+            matematyka: "Jesteś nauczycielem matematyki. Rozwiąż zadanie krok po kroku. Używaj $...$ dla wzorów.",
+            polski: "Jesteś polonistą. Przeanalizuj tekst, sprawdź błędy lub zinterpretuj lekturę. Pisz przejrzyście.",
+            fizyka: "Jesteś fizykiem. Wypisz dane, szukane, wzory i obliczenia. Pamiętaj o jednostkach!",
+            inne: "Jesteś wszechstronnym nauczycielem. Pomóż rozwiązać zadanie ze zdjęcia w sposób edukacyjny."
+        };
+
+        const basePrompt = prompts[subject] || prompts.inne;
+        const finalPrompt = `${basePrompt} Poziom trudności: ${level}. 
+        ZASADY: 
+        1. Wszystkie wzory i liczby z pierwiastkami/potęgami MUSZĄ być w dolarach $...$.
+        2. Najważniejsze kroki i WYNIK KOŃCOWY bierz zawsze w podwójne gwiazdki i dolary, np. **$x = 5$**. To bardzo ważne dla czytelności!
+        3. Pisz po polsku, zachęcająco i jasno.`;
 
         const result = await model.generateContent([
-            prompt,
+            finalPrompt,
             { inlineData: { data: req.file.buffer.toString("base64"), mimeType: req.file.mimetype } }
         ]);
 
         const response = await result.response;
         res.json({ result: response.text() });
     } catch (error) {
+        console.error(error);
         res.status(500).json({ error: error.message });
     }
 });
 
-
-// Ta linijka sprawdza, czy Render dał nam port (process.env.PORT), 
-// a jeśli nie (np. u Ciebie na kompie), to bierze 3000.
 const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-    console.log(`🚀 Serwer śmiga na porcie ${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 CloudSolve działa na porcie ${PORT}`));
