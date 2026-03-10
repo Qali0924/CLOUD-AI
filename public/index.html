@@ -28,22 +28,19 @@
             --text: #e0e2e6;
         }
 
-
-
         body { 
             margin: 0; padding: 0; font-family: 'Quicksand', sans-serif;
             background-color: var(--bg); color: var(--text);
             display: flex; height: 100vh; overflow: hidden;
         }
 
-        /* LEWY PANEL - HISTORIA */
+        /* SIDEBAR */
         .sidebar {
             width: 300px; background: var(--sidebar-bg);
             border-right: 1px solid var(--border);
             display: flex; flex-direction: column;
             transition: 0.3s;
         }
-
         .sidebar-header { padding: 25px; border-bottom: 1px solid var(--border); }
         .sidebar-content { flex: 1; overflow-y: auto; padding: 15px; }
 
@@ -64,13 +61,13 @@
             gap: 2px; background: var(--border); overflow: hidden;
         }
 
-        /* LEWA STRONA WORKSPACE - INPUT */
+        /* INPUT AREA */
         .input-area { 
             background: var(--bg); padding: 30px; overflow-y: auto;
             display: flex; flex-direction: column; gap: 20px;
         }
 
-        /* PRAWA STRONA WORKSPACE - WYNIK */
+        /* OUTPUT AREA */
         .output-area { 
             background: #020305; padding: 40px; overflow-y: auto;
             position: relative;
@@ -81,15 +78,7 @@
             background: rgba(255,255,255,0.03); border: 1px solid var(--border);
             border-radius: 20px; padding: 20px; transition: 0.3s;
         }
-@keyframes pulse-glow {
-    0% { box-shadow: 0 0 5px var(--accent-glow); }
-    50% { box-shadow: 0 0 20px var(--accent-glow); }
-    100% { box-shadow: 0 0 5px var(--accent-glow); }
-}
 
-.btn-primary:not(:disabled) {
-    animation: pulse-glow 2s infinite;
-}
         .picker { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         .chip { 
             padding: 12px; border-radius: 12px; border: 1px solid var(--border); 
@@ -97,31 +86,52 @@
         }
         .chip.active { border-color: var(--accent); background: var(--accent-glow); color: var(--accent); }
 
+        /* UPLOAD & SCANNER */
         .upload-zone {
             border: 2px dashed var(--border); border-radius: 20px;
             padding: 30px; text-align: center; cursor: pointer; transition: 0.3s;
+            position: relative; overflow: hidden; min-height: 120px;
+            display: flex; align-items: center; justify-content: center; flex-direction: column;
         }
         .upload-zone:hover { border-color: var(--accent); background: var(--accent-glow); }
 
+        #preview-container {
+            width: 100%; height: 180px; border-radius: 12px;
+            display: none; background-size: contain; background-repeat: no-repeat;
+            background-position: center; border: 1px solid var(--accent);
+        }
+
+        .scanning::after {
+            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
+            background: var(--accent); box-shadow: 0 0 20px var(--accent);
+            animation: scan-line 2s linear infinite; z-index: 10;
+        }
+        @keyframes scan-line { 0% { top: 0; } 100% { top: 100%; } }
+
+        /* PRZYCISKI & ANIMACJE */
         .btn-primary {
             background: var(--accent); color: #000; border: none;
             padding: 18px; border-radius: 15px; font-weight: 800;
             cursor: pointer; width: 100%; font-size: 1rem;
+            transition: 0.3s;
+        }
+        .btn-primary:not(:disabled) { animation: pulse-glow 2s infinite; }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 5px var(--accent-glow); }
+            50% { box-shadow: 0 0 20px var(--accent-glow); }
         }
 
-        /* STYL WYNIKU */
-        #result { 
-            max-width: 800px; margin: 0 auto; font-size: 1.05rem; line-height: 1.7;
-        }
+        #result { max-width: 800px; margin: 0 auto; font-size: 1.05rem; line-height: 1.7; }
         .terminal-header { color: var(--accent); font-family: 'Fira Code', monospace; margin-bottom: 20px; font-size: 0.8rem; }
+
+        /* EFEKT PISANIA */
+        .typing { border-right: 2px solid var(--accent); animation: blink 0.7s infinite; }
+        @keyframes blink { 50% { border-color: transparent; } }
 
         .loader { display: none; margin: 20px auto; width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        @media (max-width: 1000px) {
-            .sidebar { display: none; }
-            .workspace { grid-template-columns: 1fr; }
-        }
+        @media (max-width: 1000px) { .sidebar { display: none; } .workspace { grid-template-columns: 1fr; } }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&family=Fira+Code&display=swap" rel="stylesheet">
 </head>
@@ -132,8 +142,7 @@
             <h2 style="color:var(--accent); margin:0;">CLOUD AI</h2>
             <small style="opacity:0.4;">TWÓJ POMOCNIK SZKOLNY!</small>
         </div>
-        <div class="sidebar-content" id="historyList">
-            </div>
+        <div class="sidebar-content" id="historyList"></div>
         <div style="padding: 20px; border-top: 1px solid var(--border);">
             <div id="userInfo" style="display:none;">
                 <small id="userName" style="display:block; margin-bottom:5px;"></small>
@@ -144,10 +153,8 @@
 
     <div class="main-content">
         <div class="top-nav">
-            <div id="status">● CLOUD AI - AKTYWNE ●</div>
-            <div>
-                <button id="loginBtn" style="background:#db4437; color:#fff; border:none; padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:bold" onclick="login()">Zaloguj Google</button>
-            </div>
+            <div id="status">● CLOUD AI SYSTEM AKTYWNY ●</div>
+            <button id="loginBtn" style="background:#db4437; color:#fff; border:none; padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:bold" onclick="login()">Zaloguj Google</button>
         </div>
 
         <div class="workspace">
@@ -169,18 +176,20 @@
                     </div>
                 </div>
 
-                <div class="upload-zone" onclick="document.getElementById('imageInput').click()">
-                    <span style="font-size:2rem;">📸</span>
-                    <p id="fileName" style="margin:10px 0 0; font-size:0.85rem;">Kliknij, aby dodać zdjęcie</p>
-                    <input type="file" id="imageInput" hidden onchange="document.getElementById('fileName').innerText = this.files[0].name">
+                <div class="upload-zone" id="drop-zone" onclick="document.getElementById('imageInput').click()">
+                    <div id="upload-placeholder">
+                        <span style="font-size:2rem;">📸</span>
+                        <p id="fileName" style="margin:10px 0 0; font-size:0.85rem;">Kliknij, aby dodać zdjęcie zadania</p>
+                    </div>
+                    <div id="preview-container"></div>
+                    <input type="file" id="imageInput" hidden onchange="handlePreview(this)">
                 </div>
 
                 <button class="btn-primary" id="solveBtn" onclick="solve()">ROZWIĄŻ ZADANIE</button>
-                
                 <div class="loader" id="loader"></div>
 
                 <div class="glass-card" style="margin-top:auto">
-                    <small style="color:var(--accent); font-weight:bold;">SPOFY PLAYER</small>
+                    <small style="color:var(--accent); font-weight:bold;">CLOUD AI PLAYER</small>
                     <audio controls style="width:100%; height:30px; margin-top:10px; filter: invert(1);">
                         <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
                     </audio>
@@ -189,7 +198,7 @@
 
             <div class="output-area">
                 <div id="result">
-                    <div class="terminal-header">> Czekam na dane wejściowe...</div>
+                    <div class="terminal-header">> CLOUD AI: Czekam na dane...</div>
                 </div>
                 
                 <div class="chat-box" id="chatSection" style="max-width:800px; margin:40px auto 0; display:none;">
@@ -207,7 +216,6 @@
     <input type="hidden" id="level" value="liceum">
 
     <script>
-        // FIREBASE (Twoje klucze)
         const firebaseConfig = {
             apiKey: "AIzaSyCm5UHUdv5thmBaOrm4x9rNT4GSqh8Zg0Q",
             authDomain: "cloud-ai-ac869.firebaseapp.com",
@@ -238,10 +246,43 @@
             el.classList.add('active');
         }
 
+        function handlePreview(input) {
+            const file = input.files[0];
+            if (file) {
+                document.getElementById('fileName').innerText = file.name;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const preview = document.getElementById('preview-container');
+                    const placeholder = document.getElementById('upload-placeholder');
+                    preview.style.backgroundImage = `url(${e.target.result})`;
+                    preview.style.display = 'block';
+                    placeholder.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function typeWriter(text, element) {
+            element.innerHTML = "";
+            element.classList.add('typing');
+            const tokens = text.split('');
+            let current = "";
+            for (let t of tokens) {
+                current += t;
+                element.innerHTML = marked.parse(current);
+                if (current.length % 5 === 0) element.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                await new Promise(r => setTimeout(r, 2));
+            }
+            element.classList.remove('typing');
+            if (window.MathJax) MathJax.typesetPromise([element]);
+        }
+
         async function solve() {
             const fileInput = document.getElementById('imageInput');
-            if (!fileInput.files[0]) return alert("Dodaj zdjęcie!");
+            if (!fileInput.files[0]) return alert("Wybierz zdjęcie!");
 
+            const uploadZone = document.getElementById('drop-zone');
+            uploadZone.classList.add('scanning');
             document.getElementById('loader').style.display = 'block';
             document.getElementById('solveBtn').disabled = true;
 
@@ -253,44 +294,42 @@
             try {
                 const res = await fetch('/solve', { method: 'POST', body: formData });
                 const data = await res.json();
-                
                 const out = document.getElementById('result');
-                out.innerHTML = `<div class="terminal-header">> ANALIZA ZAKOŃCZONA POMYŚLNIE</div>` + marked.parse(data.result);
+                out.innerHTML = `<div class="terminal-header">> ANALIZA ZAKOŃCZONA</div>`;
+                await typeWriter(data.result, out);
                 document.getElementById('chatSection').style.display = 'block';
 
-                if (window.MathJax) MathJax.typesetPromise([out]);
-
-                // Save History
-                let h = JSON.parse(localStorage.getItem('spofyHistory') || '[]');
+                let h = JSON.parse(localStorage.getItem('cloudHistory') || '[]');
                 h.unshift({ id: Date.now(), subject: document.getElementById('subject').value, content: data.result });
-                localStorage.setItem('spofyHistory', JSON.stringify(h.slice(0, 15)));
+                localStorage.setItem('cloudHistory', JSON.stringify(h.slice(0, 15)));
                 loadHistory();
-            } catch (e) { alert("Błąd!"); }
+            } catch (e) { alert("Błąd CLOUD AI Engine!"); }
             finally {
+                uploadZone.classList.remove('scanning');
                 document.getElementById('loader').style.display = 'none';
                 document.getElementById('solveBtn').disabled = false;
             }
         }
 
         function loadHistory() {
-            const h = JSON.parse(localStorage.getItem('spofyHistory') || '[]');
+            const h = JSON.parse(localStorage.getItem('cloudHistory') || '[]');
             document.getElementById('historyList').innerHTML = h.map(i => `
                 <div onclick="showH('${i.id}')" style="padding:12px; margin-bottom:8px; background:rgba(255,255,255,0.03); border-radius:10px; cursor:pointer; font-size:0.8rem; border:1px solid var(--border)">
                     <span style="color:var(--accent)">#</span> ${i.subject.toUpperCase()}
-                </div>
-            `).join('');
+                </div>`).join('');
         }
 
         function showH(id) {
-            const i = JSON.parse(localStorage.getItem('spofyHistory')).find(x => x.id == id);
-            document.getElementById('result').innerHTML = marked.parse(i.content);
-            if (window.MathJax) MathJax.typesetPromise();
+            const i = JSON.parse(localStorage.getItem('cloudHistory')).find(x => x.id == id);
+            const out = document.getElementById('result');
+            out.innerHTML = marked.parse(i.content);
+            if (window.MathJax) MathJax.typesetPromise([out]);
         }
 
         async function askChat() {
             const q = document.getElementById('chatInput').value;
             const resArea = document.getElementById('chatResponse');
-            resArea.innerText = "SPOFY myśli...";
+            resArea.innerText = "CLOUD AI myśli...";
             const res = await fetch('/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
