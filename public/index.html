@@ -329,36 +329,64 @@
 async function askChat() {
     const q = document.getElementById('chatInput').value;
     const resArea = document.getElementById('chatResponse');
-    
-    // Pobieramy tekst z wyniku, żeby AI wiedziało o czym mowa
     const contextText = document.getElementById('result').innerText;
 
     if (!q) return;
 
-    resArea.innerHTML = "<span style='color:var(--accent)'>CLOUD AI analizuje kontekst...</span>";
+    resArea.innerHTML = "<span style='color:var(--accent)'>CLOUD AI tłumaczy kroki...</span>";
     
     try {
         const res = await fetch('/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                question: q, 
-                context: contextText 
-            })
+            body: JSON.stringify({ question: q, context: contextText })
         });
         
         const d = await res.json();
         
-        // KLUCZOWE ZMIANY TUTAJ:
-        // 1. Zamieniamy tekst na HTML za pomocą marked
-        resArea.innerHTML = marked.parse(d.answer);
+        // 1. Najpierw parsujemy Markdown
+        let formattedAnswer = marked.parse(d.answer);
         
-        // 2. Prosimy MathJax o wyrenderowanie wzorów matematycznych
+        // 2. Wstawiamy do HTML
+        resArea.innerHTML = formattedAnswer;
+        
+        // 3. KLUCZOWE: Odświeżamy wzory matematyczne, żeby 3\sqrt{2} nie stało się 32
         if (window.MathJax) {
-            MathJax.typesetPromise([resArea]);
+            await MathJax.typesetPromise([resArea]);
         }
     } catch (e) {
-        resArea.innerHTML = "<span style='color:#ff4d4d'>Błąd połączenia.</span>";
+        resArea.innerHTML = "Błąd połączenia z silnikiem CLOUD AI.";
+    }
+}async function askChat() {
+    const q = document.getElementById('chatInput').value;
+    const resArea = document.getElementById('chatResponse');
+    const contextText = document.getElementById('result').innerText;
+
+    if (!q) return;
+
+    resArea.innerHTML = "<span style='color:var(--accent)'>CLOUD AI tłumaczy kroki...</span>";
+    
+    try {
+        const res = await fetch('/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question: q, context: contextText })
+        });
+        
+        const d = await res.json();
+        
+        // 1. Najpierw parsujemy Markdown
+        let formattedAnswer = marked.parse(d.answer);
+        
+        // 2. Wstawiamy do HTML
+        resArea.innerHTML = formattedAnswer;
+        
+        // 3. KLUCZOWE: Odświeżamy wzory matematyczne, żeby 3\sqrt{2} nie stało się 32
+        if (window.MathJax) {
+            await MathJax.typesetPromise([resArea]);
+        }
+    } catch (e) {
+        resArea.innerHTML = "Błąd połączenia z silnikiem CLOUD AI.";
     }
 }
     </script>
