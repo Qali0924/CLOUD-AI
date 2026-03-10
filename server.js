@@ -24,7 +24,7 @@ const groq = process.env.GROQ_API_KEY ? new Groq({ apiKey: process.env.GROQ_API_
 
 app.use(express.static('public'));
 
-// --- UNIWERSALNA ROTACJA GEMINI ---
+// --- ROTACJA GEMINI ---
 async function tryGemini(prompt, fileData = null, attempt = 0) {
     if (attempt >= geminiKeys.length) throw new Error("BLOKADA_IP");
     const genAI = new GoogleGenerativeAI(geminiKeys[currentGeminiIndex].trim());
@@ -39,7 +39,7 @@ async function tryGemini(prompt, fileData = null, attempt = 0) {
     }
 }
 
-// --- GŁÓWNA OBSŁUGA ZADANIA (Multi-Subject Prompt) ---
+// --- GŁÓWNA OBSŁUGA ZADANIA ---
 app.post('/solve', upload.single('image'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: "Wgraj zdjęcie!" });
@@ -48,37 +48,35 @@ app.post('/solve', upload.single('image'), async (req, res) => {
         const base64Data = req.file.buffer.toString("base64");
         const mimeType = req.file.mimetype;
 
-        // DYNAMICZNY PROMPT ZALEŻNY OD PRZEDMIOTU
         let subjectInstruction = "";
         if (subject.toLowerCase().includes("polski")) {
-            subjectInstruction = "Analizuj tekst literacki, gramatykę lub kontekst historyczny. Podaj konkretną interpretację lub odpowiedź na pytanie do tekstu.";
+            subjectInstruction = "Podaj synonimy, analizę lub odpowiedzi. Skup się na poprawnej polszczyźnie.";
         } else if (subject.toLowerCase().includes("fizyka")) {
-            subjectInstruction = "Wypisz dane i szukane. Podaj wzory fizyczne i jednostki. Pamiętaj o zamianie jednostek na układ SI (m, kg, s).";
-        } else if (subject.toLowerCase().includes("matematyka")) {
-            subjectInstruction = "Podaj czyste obliczenia krok po kroku. Sprawdź dwukrotnie znaki i pierwiastki.";
+            subjectInstruction = "Dane, szukane, wzory i czyste obliczenia. Pilnuj jednostek.";
         } else {
-            subjectInstruction = "Rozwiąż zadanie zgodnie z zasadami tego przedmiotu, skupiając się na konkretach.";
+            subjectInstruction = "Czyste rozwiązanie merytoryczne.";
         }
 
-        const finalPrompt = `Jesteś ekspertem z przedmiotu: ${subject}. Poziom: ${level}.
-        ZADANIE: Rozwiąż zadanie ze zdjęcia.
+        const finalPrompt = `Ekspert: ${subject}. Poziom: ${level}.
+        ZADANIE: Rozwiąż konkretnie.
         
-        INSTRUKCJA SPECJALISTYCZNA: ${subjectInstruction}
+        INSTRUKCJA: ${subjectInstruction}
         
-        WYMAGANIA:
-        1. ZERO lania wody i zbędnych komentarzy o procesie myślowym.
-        2. Używaj $...$ dla wzorów i obliczeń.
-        3. Najważniejsze etapy i wyniki pośrednie zapisuj jako \`[WAŻNE: wynik/wniosek]\`.
+        ZASADY FORMATOWANIA:
+        1. ZERO powtarzania tych samych informacji w opisach.
+        2. Używaj $...$ wyłącznie do matematyki/fizyki.
+        3. Tag \`[WAŻNE: ...]\` stosuj TYLKO do podkreślenia ostatecznego słowa lub kluczowej wartości (max raz na punkt).
+        4. Nie pisz "najbardziej odpowiednie wyrazy to..." – po prostu podaj rozwiązanie.
         
         STRUKTURA:
-        - Rozwiązanie merytoryczne.
-        - ### WYNIK KOŃCOWY: **$...$** (lub pogrubiony tekst dla przedmiotów humanistycznych).`;
+        - Rozwiązanie punkt po punkcie.
+        - ### WYNIK KOŃCOWY: **[Tu tylko ostateczna odpowiedź]**`;
 
         try {
             const result = await tryGemini(finalPrompt, { inlineData: { data: base64Data, mimeType } });
             return res.json({ result });
         } catch (e) {
-            console.log("❌ Gemini padło. Uruchamiam Llama 4 Scout...");
+            console.log("❌ Gemini padło. Odpalam Llama 4 Scout...");
             if (groq) {
                 const response = await groq.chat.completions.create({
                     model: "meta-llama/llama-4-scout-17b-16e-instruct", 
@@ -93,11 +91,11 @@ app.post('/solve', upload.single('image'), async (req, res) => {
     }
 });
 
-// --- CZAT SPOFY (Z poprawioną logiką) ---
+// --- CZAT SPOFY ---
 app.post('/chat', async (req, res) => {
     try {
         const { question, context } = req.body;
-        const chatPrompt = `Kontekst zadania: ${context}\nUżytkownik pyta: ${question}\nOdpowiedz jako korepetytor SPOFY (krótko, konkretnie, merytorycznie).`;
+        const chatPrompt = `Kontekst: ${context}\nUżytkownik: ${question}\nOdpowiedz krótko jako korepetytor SPOFY.`;
         try {
             const answer = await tryGemini(chatPrompt);
             return res.json({ answer });
@@ -117,4 +115,4 @@ app.post('/chat', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 SPOFY LIVE: All Subjects & Chat Ready`));
+app.listen(PORT, () => console.log(`🚀 SPOFY LIVE: Clean & Fast`));
