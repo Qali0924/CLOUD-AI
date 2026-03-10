@@ -329,33 +329,36 @@
 async function askChat() {
     const q = document.getElementById('chatInput').value;
     const resArea = document.getElementById('chatResponse');
-    const fullContext = document.getElementById('result').innerText; // Pobieramy treść wyniku
+    
+    // Pobieramy tekst z wyniku, żeby AI wiedziało o czym mowa
+    const contextText = document.getElementById('result').innerText;
 
     if (!q) return;
 
-    resArea.innerHTML = "<span style='color:var(--accent)'>CLOUD AI myśli...</span>";
+    resArea.innerHTML = "<span style='color:var(--accent)'>CLOUD AI analizuje kontekst...</span>";
     
     try {
         const res = await fetch('/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            // Wysyłamy pytanie ORAZ kontekst z pola wynikowego
             body: JSON.stringify({ 
                 question: q, 
-                context: fullContext 
+                context: contextText 
             })
         });
         
         const d = await res.json();
         
-        // Renderujemy odpowiedź używając marked (dla markdown) i MathJax (dla wzorów)
+        // KLUCZOWE ZMIANY TUTAJ:
+        // 1. Zamieniamy tekst na HTML za pomocą marked
         resArea.innerHTML = marked.parse(d.answer);
         
+        // 2. Prosimy MathJax o wyrenderowanie wzorów matematycznych
         if (window.MathJax) {
             MathJax.typesetPromise([resArea]);
         }
     } catch (e) {
-        resArea.innerHTML = "<span style='color:#ff4d4d'>Błąd: Nie udało się połączyć z CLOUD AI.</span>";
+        resArea.innerHTML = "<span style='color:#ff4d4d'>Błąd połączenia.</span>";
     }
 }
     </script>
