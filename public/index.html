@@ -12,7 +12,10 @@
     
     <script>
         window.MathJax = {
-            tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] },
+            tex: { 
+                inlineMath: [['$', '$'], ['\\(', '\\)']], 
+                displayMath: [['$$', '$$'], ['\\[', '\\]']] 
+            },
             svg: { fontCache: 'global' }
         };
     </script>
@@ -34,17 +37,14 @@
             display: flex; height: 100vh; overflow: hidden;
         }
 
-        /* SIDEBAR */
         .sidebar {
             width: 300px; background: var(--sidebar-bg);
             border-right: 1px solid var(--border);
             display: flex; flex-direction: column;
-            transition: 0.3s;
         }
         .sidebar-header { padding: 25px; border-bottom: 1px solid var(--border); }
         .sidebar-content { flex: 1; overflow-y: auto; padding: 15px; }
 
-        /* GŁÓWNY PANEL */
         .main-content {
             flex: 1; display: flex; flex-direction: column;
             background-image: radial-gradient(circle at 50% 0%, rgba(46, 204, 113, 0.05), transparent);
@@ -61,77 +61,24 @@
             gap: 2px; background: var(--border); overflow: hidden;
         }
 
-        /* INPUT AREA */
-        .input-area { 
-            background: var(--bg); padding: 30px; overflow-y: auto;
-            display: flex; flex-direction: column; gap: 20px;
-        }
+        .input-area { background: var(--bg); padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+        .output-area { background: #020305; padding: 40px; overflow-y: auto; position: relative; }
 
-        /* OUTPUT AREA */
-        .output-area { 
-            background: #020305; padding: 40px; overflow-y: auto;
-            position: relative;
-        }
-
-        /* ELEMENTY UI */
-        .glass-card {
-            background: rgba(255,255,255,0.03); border: 1px solid var(--border);
-            border-radius: 20px; padding: 20px; transition: 0.3s;
-        }
-
+        .glass-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 20px; padding: 20px; }
         .picker { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-        .chip { 
-            padding: 12px; border-radius: 12px; border: 1px solid var(--border); 
-            text-align: center; cursor: pointer; font-size: 0.85rem; transition: 0.3s;
-        }
+        .chip { padding: 12px; border-radius: 12px; border: 1px solid var(--border); text-align: center; cursor: pointer; font-size: 0.85rem; transition: 0.3s; }
         .chip.active { border-color: var(--accent); background: var(--accent-glow); color: var(--accent); }
 
-        /* UPLOAD & SCANNER */
-        .upload-zone {
-            border: 2px dashed var(--border); border-radius: 20px;
-            padding: 30px; text-align: center; cursor: pointer; transition: 0.3s;
-            position: relative; overflow: hidden; min-height: 120px;
-            display: flex; align-items: center; justify-content: center; flex-direction: column;
-        }
-        .upload-zone:hover { border-color: var(--accent); background: var(--accent-glow); }
+        .upload-zone { border: 2px dashed var(--border); border-radius: 20px; padding: 30px; text-align: center; cursor: pointer; position: relative; min-height: 120px; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+        #preview-container { width: 100%; height: 180px; border-radius: 12px; display: none; background-size: contain; background-repeat: no-repeat; background-position: center; border: 1px solid var(--accent); }
 
-        #preview-container {
-            width: 100%; height: 180px; border-radius: 12px;
-            display: none; background-size: contain; background-repeat: no-repeat;
-            background-position: center; border: 1px solid var(--accent);
-        }
-
-        .scanning::after {
-            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
-            background: var(--accent); box-shadow: 0 0 20px var(--accent);
-            animation: scan-line 2s linear infinite; z-index: 10;
-        }
+        .btn-primary { background: var(--accent); color: #000; border: none; padding: 18px; border-radius: 15px; font-weight: 800; cursor: pointer; width: 100%; font-size: 1rem; }
+        .scanning::after { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: var(--accent); box-shadow: 0 0 20px var(--accent); animation: scan-line 2s linear infinite; }
         @keyframes scan-line { 0% { top: 0; } 100% { top: 100%; } }
 
-        /* PRZYCISKI & ANIMACJE */
-        .btn-primary {
-            background: var(--accent); color: #000; border: none;
-            padding: 18px; border-radius: 15px; font-weight: 800;
-            cursor: pointer; width: 100%; font-size: 1rem;
-            transition: 0.3s;
-        }
-        .btn-primary:not(:disabled) { animation: pulse-glow 2s infinite; }
-        @keyframes pulse-glow {
-            0%, 100% { box-shadow: 0 0 5px var(--accent-glow); }
-            50% { box-shadow: 0 0 20px var(--accent-glow); }
-        }
-
         #result { max-width: 800px; margin: 0 auto; font-size: 1.05rem; line-height: 1.7; }
-        .terminal-header { color: var(--accent); font-family: 'Fira Code', monospace; margin-bottom: 20px; font-size: 0.8rem; }
-
-        /* EFEKT PISANIA */
-        .typing { border-right: 2px solid var(--accent); animation: blink 0.7s infinite; }
-        @keyframes blink { 50% { border-color: transparent; } }
-
         .loader { display: none; margin: 20px auto; width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        @media (max-width: 1000px) { .sidebar { display: none; } .workspace { grid-template-columns: 1fr; } }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&family=Fira+Code&display=swap" rel="stylesheet">
 </head>
@@ -146,7 +93,7 @@
         <div style="padding: 20px; border-top: 1px solid var(--border);">
             <div id="userInfo" style="display:none;">
                 <small id="userName" style="display:block; margin-bottom:5px;"></small>
-                <button onclick="logout()" style="color:#ff4d4d; background:none; border:none; cursor:pointer; font-size:0.7rem; padding:0;">Wyloguj sesję</button>
+                <button onclick="logout()" style="color:#ff4d4d; background:none; border:none; cursor:pointer; font-size:0.7rem;">Wyloguj sesję</button>
             </div>
         </div>
     </div>
@@ -154,59 +101,38 @@
     <div class="main-content">
         <div class="top-nav">
             <div id="status">● CLOUD AI SYSTEM AKTYWNY ●</div>
-            <button id="loginBtn" style="background:#db4437; color:#fff; border:none; padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:bold" onclick="login()">Zaloguj Google</button>
+            <button id="loginBtn" style="background:#db4437; color:#fff; border:none; padding:8px 16px; border-radius:8px; cursor:pointer;" onclick="login()">Zaloguj Google</button>
         </div>
 
         <div class="workspace">
             <div class="input-area">
                 <div class="glass-card">
-                    <span style="font-size:0.7rem; letter-spacing:1px; opacity:0.5; display:block; margin-bottom:10px;">KONFIGURACJA ANALIZY</span>
+                    <span style="font-size:0.7rem; opacity:0.5; display:block; margin-bottom:10px;">PRZEDMIOT</span>
                     <div class="picker">
                         <div class="chip active" onclick="setVal('subject', 'matematyka', this)">Matematyka</div>
                         <div class="chip" onclick="setVal('subject', 'polski', this)">Język Polski</div>
-                        <div class="chip" onclick="setVal('subject', 'fizyka', this)">Fizyka</div>
-                        <div class="chip" onclick="setVal('subject', 'inne', this)">Inne</div>
-                    </div>
-                </div>
-
-                <div class="glass-card">
-                    <div class="picker">
-                        <div class="chip active" onclick="setVal('level', 'liceum', this)">Liceum</div>
-                        <div class="chip" onclick="setVal('level', 'podstawowka', this)">Podstawówka</div>
                     </div>
                 </div>
 
                 <div class="upload-zone" id="drop-zone" onclick="document.getElementById('imageInput').click()">
-                    <div id="upload-placeholder">
-                        <span style="font-size:2rem;">📸</span>
-                        <p id="fileName" style="margin:10px 0 0; font-size:0.85rem;">Kliknij, aby dodać zdjęcie zadania</p>
-                    </div>
+                    <div id="upload-placeholder">📸 <p id="fileName">Dodaj zdjęcie</p></div>
                     <div id="preview-container"></div>
                     <input type="file" id="imageInput" hidden onchange="handlePreview(this)">
                 </div>
 
                 <button class="btn-primary" id="solveBtn" onclick="solve()">ROZWIĄŻ ZADANIE</button>
                 <div class="loader" id="loader"></div>
-
-                <div class="glass-card" style="margin-top:auto">
-                    <small style="color:var(--accent); font-weight:bold;">CLOUD AI PLAYER</small>
-                    <audio controls style="width:100%; height:30px; margin-top:10px; filter: invert(1);">
-                        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
-                    </audio>
-                </div>
             </div>
 
             <div class="output-area">
-                <div id="result">
-                    <div class="terminal-header">> CLOUD AI: Czekam na dane...</div>
-                </div>
+                <div id="result"><div class="terminal-header">> Czekam na dane...</div></div>
                 
                 <div class="chat-box" id="chatSection" style="max-width:800px; margin:40px auto 0; display:none;">
                     <div style="display:flex; gap:10px;">
-                        <input type="text" id="chatInput" placeholder="Zadaj pytanie do wyniku..." style="flex:1; background:#111; border:1px solid var(--border); color:#fff; padding:15px; border-radius:12px; outline:none;">
+                        <input type="text" id="chatInput" placeholder="Wyjaśnić krok?" style="flex:1; background:#111; border:1px solid var(--border); color:#fff; padding:15px; border-radius:12px;">
                         <button onclick="askChat()" style="background:var(--accent); border:none; padding:0 25px; border-radius:12px; font-weight:bold; cursor:pointer;">PYTAJ</button>
                     </div>
-                    <div id="chatResponse" style="margin-top:20px; color:#aaa; font-size:0.95rem;"></div>
+                    <div id="chatResponse" style="margin-top:20px; color:#aaa;"></div>
                 </div>
             </div>
         </div>
@@ -216,31 +142,27 @@
     <input type="hidden" id="level" value="liceum">
 
     <script>
+        // Inicjalizacja Firebase (Twoje dane)
         const firebaseConfig = {
             apiKey: "AIzaSyCm5UHUdv5thmBaOrm4x9rNT4GSqh8Zg0Q",
             authDomain: "cloud-ai-ac869.firebaseapp.com",
             projectId: "cloud-ai-ac869",
-            storageBucket: "cloud-ai-ac869.firebasestorage.app",
-            messagingSenderId: "488239859442",
             appId: "1:488239859442:web:cc50de432944c73cf2f26b"
         };
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
-        const db = firebase.firestore();
 
         auth.onAuthStateChanged(user => {
             if (user) {
                 document.getElementById('loginBtn').style.display = 'none';
                 document.getElementById('userInfo').style.display = 'block';
                 document.getElementById('userName').innerText = user.displayName;
-                loadHistory();
             }
         });
 
         async function login() { await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
         function logout() { auth.signOut(); location.reload(); }
-
-        function setVal(id, val, el) {
+        function setVal(id, val, el) { 
             document.getElementById(id).value = val;
             el.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
             el.classList.add('active');
@@ -249,146 +171,76 @@
         function handlePreview(input) {
             const file = input.files[0];
             if (file) {
-                document.getElementById('fileName').innerText = file.name;
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    const preview = document.getElementById('preview-container');
-                    const placeholder = document.getElementById('upload-placeholder');
-                    preview.style.backgroundImage = `url(${e.target.result})`;
-                    preview.style.display = 'block';
-                    placeholder.style.display = 'none';
+                    document.getElementById('preview-container').style.backgroundImage = `url(${e.target.result})`;
+                    document.getElementById('preview-container').style.display = 'block';
+                    document.getElementById('upload-placeholder').style.display = 'none';
                 };
                 reader.readAsDataURL(file);
             }
         }
 
+        // POPRAWIONY TYPEWRITER
         async function typeWriter(text, element) {
             element.innerHTML = "";
-            element.classList.add('typing');
-            const tokens = text.split('');
-            let current = "";
-            for (let t of tokens) {
-                current += t;
-                element.innerHTML = marked.parse(current);
-                if (current.length % 5 === 0) element.scrollIntoView({ behavior: 'smooth', block: 'end' });
-                await new Promise(r => setTimeout(r, 2));
+            const parsedHTML = marked.parse(text);
+            element.innerHTML = parsedHTML; // Wstawiamy od razu sformatowany tekst
+            
+            if (window.MathJax) {
+                await MathJax.typesetPromise([element]);
             }
-            element.classList.remove('typing');
-            if (window.MathJax) MathJax.typesetPromise([element]);
         }
 
         async function solve() {
             const fileInput = document.getElementById('imageInput');
             if (!fileInput.files[0]) return alert("Wybierz zdjęcie!");
 
-            const uploadZone = document.getElementById('drop-zone');
-            uploadZone.classList.add('scanning');
+            document.getElementById('drop-zone').classList.add('scanning');
             document.getElementById('loader').style.display = 'block';
-            document.getElementById('solveBtn').disabled = true;
 
             const formData = new FormData();
             formData.append('image', fileInput.files[0]);
             formData.append('subject', document.getElementById('subject').value);
-            formData.append('level', document.getElementById('level').value);
 
             try {
                 const res = await fetch('/solve', { method: 'POST', body: formData });
                 const data = await res.json();
-                const out = document.getElementById('result');
-                out.innerHTML = `<div class="terminal-header">> ANALIZA ZAKOŃCZONA</div>`;
-                await typeWriter(data.result, out);
+                await typeWriter(data.result, document.getElementById('result'));
                 document.getElementById('chatSection').style.display = 'block';
-
-                let h = JSON.parse(localStorage.getItem('cloudHistory') || '[]');
-                h.unshift({ id: Date.now(), subject: document.getElementById('subject').value, content: data.result });
-                localStorage.setItem('cloudHistory', JSON.stringify(h.slice(0, 15)));
-                loadHistory();
-            } catch (e) { alert("Błąd CLOUD AI Engine!"); }
+            } catch (e) { alert("Błąd CLOUD AI"); }
             finally {
-                uploadZone.classList.remove('scanning');
+                document.getElementById('drop-zone').classList.remove('scanning');
                 document.getElementById('loader').style.display = 'none';
-                document.getElementById('solveBtn').disabled = false;
             }
         }
 
-        function loadHistory() {
-            const h = JSON.parse(localStorage.getItem('cloudHistory') || '[]');
-            document.getElementById('historyList').innerHTML = h.map(i => `
-                <div onclick="showH('${i.id}')" style="padding:12px; margin-bottom:8px; background:rgba(255,255,255,0.03); border-radius:10px; cursor:pointer; font-size:0.8rem; border:1px solid var(--border)">
-                    <span style="color:var(--accent)">#</span> ${i.subject.toUpperCase()}
-                </div>`).join('');
+        // POPRAWIONA JEDYNA FUNKCJA CZATU
+        async function askChat() {
+            const q = document.getElementById('chatInput').value;
+            const resArea = document.getElementById('chatResponse');
+            const contextText = document.getElementById('result').innerText;
+
+            if (!q) return;
+            resArea.innerHTML = "CLOUD AI analizuje...";
+
+            try {
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: q, context: contextText })
+                });
+                const d = await res.json();
+                
+                // Renderowanie Markdown + MathJax
+                resArea.innerHTML = marked.parse(d.answer);
+                if (window.MathJax) {
+                    await MathJax.typesetPromise([resArea]);
+                }
+            } catch (e) {
+                resArea.innerHTML = "Błąd połączenia.";
+            }
         }
-
-        function showH(id) {
-            const i = JSON.parse(localStorage.getItem('cloudHistory')).find(x => x.id == id);
-            const out = document.getElementById('result');
-            out.innerHTML = marked.parse(i.content);
-            if (window.MathJax) MathJax.typesetPromise([out]);
-        }
-
-async function askChat() {
-    const q = document.getElementById('chatInput').value;
-    const resArea = document.getElementById('chatResponse');
-    const contextText = document.getElementById('result').innerText;
-
-    if (!q) return;
-
-    resArea.innerHTML = "<span style='color:var(--accent)'>CLOUD AI tłumaczy kroki...</span>";
-    
-    try {
-        const res = await fetch('/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question: q, context: contextText })
-        });
-        
-        const d = await res.json();
-        
-        // 1. Najpierw parsujemy Markdown
-        let formattedAnswer = marked.parse(d.answer);
-        
-        // 2. Wstawiamy do HTML
-        resArea.innerHTML = formattedAnswer;
-        
-        // 3. KLUCZOWE: Odświeżamy wzory matematyczne, żeby 3\sqrt{2} nie stało się 32
-        if (window.MathJax) {
-            await MathJax.typesetPromise([resArea]);
-        }
-    } catch (e) {
-        resArea.innerHTML = "Błąd połączenia z silnikiem CLOUD AI.";
-    }
-}async function askChat() {
-    const q = document.getElementById('chatInput').value;
-    const resArea = document.getElementById('chatResponse');
-    const contextText = document.getElementById('result').innerText;
-
-    if (!q) return;
-
-    resArea.innerHTML = "<span style='color:var(--accent)'>CLOUD AI tłumaczy kroki...</span>";
-    
-    try {
-        const res = await fetch('/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question: q, context: contextText })
-        });
-        
-        const d = await res.json();
-        
-        // 1. Najpierw parsujemy Markdown
-        let formattedAnswer = marked.parse(d.answer);
-        
-        // 2. Wstawiamy do HTML
-        resArea.innerHTML = formattedAnswer;
-        
-        // 3. KLUCZOWE: Odświeżamy wzory matematyczne, żeby 3\sqrt{2} nie stało się 32
-        if (window.MathJax) {
-            await MathJax.typesetPromise([resArea]);
-        }
-    } catch (e) {
-        resArea.innerHTML = "Błąd połączenia z silnikiem CLOUD AI.";
-    }
-}
     </script>
 </body>
 </html>
