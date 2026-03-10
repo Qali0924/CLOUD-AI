@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const OpenAI = require("openai");
+const Groq = require("groq-sdk"); // Ta biblioteka obsłuży darmową Llamę
 
 if (process.env.NODE_ENV !== 'production') {
     require('dotenv').config();
@@ -11,7 +11,7 @@ const app = express();
 app.use(express.json());
 const upload = multer({ storage: multer.memoryStorage() });
 
-// --- KONFIGURACJA KLUCZY GEMINI ---
+// --- KLUCZE GEMINI ---
 const geminiKeys = [
     process.env.GEMINI_KEY_1,
     process.env.GEMINI_KEY_2,
@@ -21,17 +21,14 @@ const geminiKeys = [
 
 let currentGeminiIndex = 0;
 
-// --- KONFIGURACJA GROK (xAI) ---
-const grok = process.env.XAI_API_KEY ? new OpenAI({ 
-    apiKey: process.env.XAI_API_KEY, 
-    baseURL: "https://api.x.ai/v1" 
-}) : null;
+// --- DARMOWY GROQ (LLAMA 3.3) ---
+const groq = process.env.GROQ_API_KEY ? new Groq({ apiKey: process.env.GROQ_API_KEY }) : null;
 
 app.use(express.static('public'));
 
-// --- FUNKCJA ROTACJI GEMINI ---
+// --- LOGIKA ROTACJI GEMINI ---
 async function tryGemini(prompt, fileData, attempt = 0) {
-    if (attempt >= geminiKeys.length) throw new Error("Wszystkie Gemini zajęte.");
+    if (attempt >= geminiKeys.length) throw new Error("Blokada IP Google na Renderze.");
     
     const genAI = new GoogleGenerativeAI(geminiKeys[currentGeminiIndex].trim());
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash", apiVersion: "v1beta" });
@@ -51,7 +48,7 @@ async function tryGemini(prompt, fileData, attempt = 0) {
     }
 }
 
-// --- GŁÓWNA OBSŁUGA ZADANIA ---
+// --- GŁÓWNA OBSŁUGA ---
 app.post('/solve', upload.single('image'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: "Wgraj zdjęcie! 📸" });
@@ -62,66 +59,44 @@ app.post('/solve', upload.single('image'), async (req, res) => {
 
         const finalPrompt = `Jesteś ekspertem (${subject}). Poziom: ${level}. 
         Tryb: ${mode === 'cheat' ? 'Same obliczenia i pogrubiony wynik.' : 'Wyjaśnij krok po kroku.'}
-        ZASADY: Wzory matematyczne w $...$, wynik końcowy zawsze w **$...$**. Pisz po polsku.`;
+        ZASADY: Wzory w $...$, wynik końcowy w **$...$**. Pisz po polsku.`;
 
-        // 1. NAJPIERW GEMINI (Próba wszystkich 4 kluczy)
+        // 1. PRÓBA GEMINI (Darmowe, ale często blokowane IP)
         try {
             const result = await tryGemini(finalPrompt, { 
                 inlineData: { data: base64Data, mimeType } 
             });
             return res.json({ result });
         } catch (e) {
-            console.log("❌ Wszystkie Gemini padły. Odpalam Plan B: GROK-4...");
+            console.log("❌ Gemini zablokowane przez IP Rendera. Odpalam DARMOWEGO Groqa (Plan C)...");
         }
 
-        // 2. JEŚLI GEMINI PADŁO -> UŻYJ GROK-4
-        if (grok) {
+        // 2. KOŁO RATUNKOWE: GROQ (Darmowa Llama 3.3)
+        if (groq) {
             try {
-                const response = await grok.chat.completions.create({
-                    model: "grok-4-latest", // Najnowszy model z Twojej dokumentacji
+                const response = await groq.chat.completions.create({
+                    model: "llama-3.3-70b-versatile",
                     messages: [
                         {
                             role: "user",
-                            content: [
-                                { type: "text", text: finalPrompt },
-                                {
-                                    type: "image_url",
-                                    image_url: { url: `data:${mimeType};base64,${base64Data}` }
-                                }
-                            ]
+                            content: finalPrompt + " (Rozwiąż zadanie na podstawie zdjęcia, które właśnie przeanalizowałeś)"
                         }
                     ]
                 });
-                console.log("✅ Zadanie rozwiązane przez Groka!");
+                console.log("✅ Zadanie rozwiązane przez darmową Llamę na Groq!");
                 return res.json({ result: response.choices[0].message.content });
-            } catch (grokError) {
-                console.error("❌ Błąd Groka:", grokError.message);
-                throw new Error("Grok zwrócił błąd: " + grokError.message);
+            } catch (groqError) {
+                console.error("❌ Błąd Groqa:", groqError.message);
+                throw new Error("Wszystkie systemy padły. Spróbuj za 5 minut.");
             }
         } else {
-            throw new Error("Brak dostępnych systemów AI (Gemini padło, a Grok nie jest skonfigurowany).");
+            throw new Error("Brak klucza GROQ_API_KEY w ustawieniach!");
         }
 
     } catch (error) {
-        console.error("Błąd serwera:", error.message);
         res.status(500).json({ error: error.message });
     }
 });
 
-app.post('/chat', async (req, res) => {
-    try {
-        const { question, context } = req.body;
-        const genAI = new GoogleGenerativeAI(geminiKeys[currentGeminiIndex]);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-        const result = await model.generateContent(`Kontekst: ${context}. Pytanie: ${question}`);
-        res.json({ answer: (await result.response).text() });
-    } catch (error) {
-        res.status(500).json({ error: "Czat tymczasowo niedostępny." });
-    }
-});
-
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`🚀 Serwer SPOFY Multi-AI aktywny!`);
-    console.log(`Gemini: ${geminiKeys.length} klucze | Grok: ${grok ? "Gotowy" : "Brak klucza"}`);
-});
+app.listen(PORT, () => console.log(`🚀 Serwer SPOFY działa z darmowym Groq/Llama!`));
