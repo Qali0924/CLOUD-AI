@@ -72,23 +72,31 @@ app.post('/solve', upload.single('image'), async (req, res) => {
         }
 
         // 2. KOŁO RATUNKOWE: GROQ (Darmowa Llama 3.3)
+// 2. KOŁO RATUNKOWE: GROQ (Llama z obsługą OBRAZÓW)
         if (groq) {
             try {
                 const response = await groq.chat.completions.create({
-                    model: "llama-3.3-70b-versatile",
+                    model: "llama-3.2-11b-vision-preview", // Model, który WIDZI zdjęcia
                     messages: [
                         {
                             role: "user",
-                            content: finalPrompt + " (Rozwiąż zadanie na podstawie zdjęcia, które właśnie przeanalizowałeś)"
+                            content: [
+                                { type: "text", text: finalPrompt },
+                                {
+                                    type: "image_url",
+                                    image_url: { url: `data:${mimeType};base64,${base64Data}` }
+                                }
+                            ]
                         }
                     ]
                 });
-                console.log("✅ Zadanie rozwiązane przez darmową Llamę na Groq!");
+                console.log("✅ Zadanie rozwiązane przez darmową Llamę Vision!");
                 return res.json({ result: response.choices[0].message.content });
             } catch (groqError) {
                 console.error("❌ Błąd Groqa:", groqError.message);
-                throw new Error("Wszystkie systemy padły. Spróbuj za 5 minut.");
+                throw new Error("Wszystkie systemy padły. Spróbuj później.");
             }
+        }
         } else {
             throw new Error("Brak klucza GROQ_API_KEY w ustawieniach!");
         }
@@ -100,3 +108,4 @@ app.post('/solve', upload.single('image'), async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Serwer SPOFY działa z darmowym Groq/Llama!`));
+
