@@ -58,7 +58,7 @@ app.post('/solve', upload.single('image'), async (req, res) => {
 
         const finalPrompt = `Jesteś ekspertem (${subject}). Poziom: ${level}. 
         Tryb: ${mode === 'cheat' ? 'Same obliczenia i pogrubiony wynik.' : 'Wyjaśnij krok po kroku.'}
-        ZASADY: Wzory w $...$, wynik końcowy w **$...$**. Pisz po polsku.`;
+        ZASADY: Wszystkie wzory matematyczne w $...$, wynik końcowy w **$...$**. Odpowiadaj wyłącznie po polsku.`;
 
         // 1. NAJPIERW GEMINI (Próba 4 kluczy)
         try {
@@ -74,8 +74,9 @@ app.post('/solve', upload.single('image'), async (req, res) => {
         // 2. PLAN B: GROQ (Llama 3.2 Vision - Widzi obrazy)
         if (groq) {
             try {
+                console.log("🚀 Próba: llama-3.2-11b-vision...");
                 const response = await groq.chat.completions.create({
-                    model: "llama-3.2-11b-vision-preview",
+                    model: "llama-3.2-11b-vision",
                     messages: [
                         {
                             role: "user",
@@ -89,11 +90,29 @@ app.post('/solve', upload.single('image'), async (req, res) => {
                         }
                     ]
                 });
-                console.log("✅ Rozwiązane przez darmową Llamę Vision!");
+                console.log("✅ Rozwiązane przez darmową Llamę 11b!");
                 return res.json({ result: response.choices[0].message.content });
             } catch (groqError) {
-                console.error("❌ Błąd Groqa:", groqError.message);
-                throw new Error("Wszystkie darmowe systemy (Gemini i Llama) są przeciążone.");
+                console.log("⚠️ Llama 11b błąd, próba Llama 90b...");
+                try {
+                    const response90 = await groq.chat.completions.create({
+                        model: "llama-3.2-90b-vision",
+                        messages: [
+                            {
+                                role: "user",
+                                content: [
+                                    { type: "text", text: finalPrompt },
+                                    { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Data}` } }
+                                ]
+                            }
+                        ]
+                    });
+                    console.log("✅ Rozwiązane przez darmową Llamę 90b!");
+                    return res.json({ result: response90.choices[0].message.content });
+                } catch (err2) {
+                    console.error("❌ Błąd krytyczny Groqa:", err2.message);
+                    throw new Error("Wszystkie darmowe systemy (Gemini i Llama) są obecnie niedostępne.");
+                }
             }
         } else {
             throw new Error("Brak klucza GROQ_API_KEY w ustawieniach.");
@@ -108,7 +127,7 @@ app.post('/solve', upload.single('image'), async (req, res) => {
 app.post('/chat', async (req, res) => {
     try {
         const { question, context } = req.body;
-        const genAI = new GoogleGenerativeAI(geminiKeys[0]);
+        const genAI = new GoogleGenerativeAI(geminiKeys[0] || "");
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
         const result = await model.generateContent(`Pytanie: ${question}. Kontekst: ${context}`);
         res.json({ answer: (await result.response).text() });
