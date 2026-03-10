@@ -124,3 +124,4 @@ app.listen(PORT, () => {
     console.log(`🚀 Serwer SPOFY Multi-AI aktywny!`);
     console.log(`Dostępne systemy: Gemini (4 klucze), Llama 4 Scout`);
 });
+
