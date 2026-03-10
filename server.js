@@ -24,41 +24,44 @@ const groq = process.env.GROQ_API_KEY ? new Groq({ apiKey: process.env.GROQ_API_
 
 app.use(express.static('public'));
 
-// --- UNIWERSALNA FUNKCJA ROTACJI GEMINI ---
+// --- ROTACJA GEMINI ---
 async function tryGemini(prompt, fileData = null, attempt = 0) {
     if (attempt >= geminiKeys.length) throw new Error("BLOKADA_IP");
-    
     const genAI = new GoogleGenerativeAI(geminiKeys[currentGeminiIndex].trim());
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash", apiVersion: "v1beta" });
-
     try {
         console.log(`[Gemini] Próba (Klucz ${currentGeminiIndex + 1})...`);
-        const result = fileData 
-            ? await model.generateContent([prompt, fileData]) 
-            : await model.generateContent(prompt);
+        const result = fileData ? await model.generateContent([prompt, fileData]) : await model.generateContent(prompt);
         return (await result.response).text();
     } catch (error) {
-        console.log(`⚠️ Gemini ${currentGeminiIndex + 1} błąd. Przełączam...`);
         currentGeminiIndex = (currentGeminiIndex + 1) % geminiKeys.length;
         return tryGemini(prompt, fileData, attempt + 1);
     }
 }
 
-// --- ROZWIĄZYWANIE ZADAŃ (ZDJĘCIA) ---
+// --- GŁÓWNA OBSŁUGA ZADANIA ---
 app.post('/solve', upload.single('image'), async (req, res) => {
     try {
-        if (!req.file) return res.status(400).json({ error: "Wgraj zdjęcie! 📸" });
+        if (!req.file) return res.status(400).json({ error: "Wgraj zdjęcie!" });
 
-        const { subject, level, mode } = req.body;
+        const { subject, level } = req.body;
         const base64Data = req.file.buffer.toString("base64");
         const mimeType = req.file.mimetype;
 
-        const finalPrompt = `Jesteś nauczycielem (${subject}). Poziom: ${level}. Rozwiąż zadanie ze zdjęcia.
-        ZASADY:
-        1. Podziel na logiczne **Etapy**.
-        2. Używaj $...$ do matematyki. Pogrubiaj ważne fragmenty.
-        3. Obliczaj bardzo dokładnie pierwiastki i potęgi.
-        ### WYNIK KOŃCOWY: **$...$**`;
+        // Skrajnie konkretny prompt: tylko obliczenia
+        const finalPrompt = `Ekspert: ${subject}. Poziom: ${level}.
+        ZADANIE: Rozwiąż bez zbędnych słów.
+        
+        WYMAGANIA:
+        1. ZERO wstępów i opisów kroków typu "Teraz dodajemy".
+        2. Same czyste obliczenia matematyczne w kolejności logicznej.
+        3. Używaj $...$ do wzorów.
+        4. ZAZNACZANIE: Najważniejsze wyniki pośrednie i kluczowe przejścia zapisuj w formacie: \`[WAŻNE: wynik]\`.
+        5. Sprawdź dwukrotnie potęgi pierwiastków w pamięci.
+
+        STRUKTURA:
+        - Obliczenia etap po etapie.
+        - ### WYNIK KOŃCOWY: **$...$**`;
 
         try {
             const result = await tryGemini(finalPrompt, { inlineData: { data: base64Data, mimeType } });
@@ -73,40 +76,34 @@ app.post('/solve', upload.single('image'), async (req, res) => {
                 });
                 return res.json({ result: response.choices[0].message.content });
             }
-            throw new Error("Brak dostępnych systemów AI.");
         }
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-// --- NAPRAWIONY CZAT SPOFY ---
+// --- CZAT SPOFY ---
 app.post('/chat', async (req, res) => {
     try {
         const { question, context } = req.body;
-        const chatPrompt = `Kontekst zadania: ${context}\n\nUżytkownik pyta: ${question}\n\nOdpowiedz krótko i pomocnie jako korepetytor SPOFY. Używaj $...$ do wzorów.`;
-
+        const chatPrompt = `Kontekst: ${context}\nUżytkownik: ${question}\nOdpowiedz krótko (korepetytor SPOFY).`;
         try {
-            // Najpierw próbujemy Gemini (z rotacją kluczy)
             const answer = await tryGemini(chatPrompt);
             return res.json({ answer });
         } catch (e) {
-            console.log("❌ Czat Gemini zablokowany. Przełączam czat na Groq...");
-            // Jeśli Gemini nie działa, używamy szybkiego modelu tekstowego z Groq
             if (groq) {
                 const response = await groq.chat.completions.create({
-                    model: "llama-3.3-70b-versatile", // Bardzo mądry model tekstowy z Twojej listy
+                    model: "llama-3.3-70b-versatile",
                     messages: [{ role: "user", content: chatPrompt }]
                 });
                 return res.json({ answer: response.choices[0].message.content });
             }
-            throw new Error("Czat jest obecnie niedostępny.");
+            throw new Error("Offline");
         }
     } catch (error) {
-        console.error("Błąd czatu:", error.message);
-        res.status(500).json({ error: "Błąd połączenia z czatem." });
+        res.status(500).json({ error: "Czat offline." });
     }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Serwer SPOFY w pełni sprawny (Solve + Chat)!`));
+app.listen(PORT, () => console.log(`🚀 SPOFY LIVE (Quick Solve + Chat)`));
