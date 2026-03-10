@@ -11,7 +11,7 @@ const app = express();
 app.use(express.json());
 const upload = multer({ storage: multer.memoryStorage() });
 
-// --- KONFIGURACJA KLUCZY ---
+// --- KONFIGURACJA KLUCZY GEMINI ---
 const geminiKeys = [
     process.env.GEMINI_KEY_1,
     process.env.GEMINI_KEY_2,
@@ -21,7 +21,7 @@ const geminiKeys = [
 
 let currentGeminiIndex = 0;
 
-// Inicjalizacja Groq (Darmowa Llama Vision)
+// --- KONFIGURACJA GROQ (Darmowa Llama Vision) ---
 const groq = process.env.GROQ_API_KEY ? new Groq({ apiKey: process.env.GROQ_API_KEY }) : null;
 
 app.use(express.static('public'));
@@ -60,7 +60,7 @@ app.post('/solve', upload.single('image'), async (req, res) => {
         Tryb: ${mode === 'cheat' ? 'Same obliczenia i pogrubiony wynik.' : 'Wyjaśnij krok po kroku.'}
         ZASADY: Wszystkie wzory matematyczne w $...$, wynik końcowy w **$...$**. Odpowiadaj wyłącznie po polsku.`;
 
-        // 1. NAJPIERW GEMINI (Próba 4 kluczy)
+        // 1. PRÓBA GEMINI
         try {
             const result = await tryGemini(finalPrompt, { 
                 inlineData: { data: base64Data, mimeType } 
@@ -71,12 +71,12 @@ app.post('/solve', upload.single('image'), async (req, res) => {
             console.log("❌ Gemini zablokowane (IP Render). Odpalam DARMOWY Groq Vision (Plan B)...");
         }
 
-        // 2. PLAN B: GROQ (Llama 3.2 Vision - Widzi obrazy)
+        // 2. PLAN B: GROQ (Używamy Twoich pełnych nazw z 2026 roku)
         if (groq) {
             try {
-                console.log("🚀 Próba: llama-3.2-11b-vision...");
+                console.log("🚀 Próba: llama-3.2-11b-vision-instruct...");
                 const response = await groq.chat.completions.create({
-                    model: "llama-3.2-11b-vision",
+                    model: "llama-3.2-11b-vision-instruct", 
                     messages: [
                         {
                             role: "user",
@@ -90,13 +90,13 @@ app.post('/solve', upload.single('image'), async (req, res) => {
                         }
                     ]
                 });
-                console.log("✅ Rozwiązane przez darmową Llamę 11b!");
+                console.log("✅ Rozwiązane przez Llama Vision Instruct!");
                 return res.json({ result: response.choices[0].message.content });
             } catch (groqError) {
-                console.log("⚠️ Llama 11b błąd, próba Llama 90b...");
+                console.log("⚠️ Błąd 11b (404/Limit), próbuję model 90b...");
                 try {
                     const response90 = await groq.chat.completions.create({
-                        model: "llama-3.2-90b-vision",
+                        model: "llama-3.2-90b-vision-instruct", 
                         messages: [
                             {
                                 role: "user",
@@ -107,10 +107,10 @@ app.post('/solve', upload.single('image'), async (req, res) => {
                             }
                         ]
                     });
-                    console.log("✅ Rozwiązane przez darmową Llamę 90b!");
+                    console.log("✅ Rozwiązane przez Llama Vision 90b!");
                     return res.json({ result: response90.choices[0].message.content });
                 } catch (err2) {
-                    console.error("❌ Błąd krytyczny Groqa:", err2.message);
+                    console.error("❌ Wszystkie modele Groq zawiodły:", err2.message);
                     throw new Error("Wszystkie darmowe systemy (Gemini i Llama) są obecnie niedostępne.");
                 }
             }
@@ -124,6 +124,7 @@ app.post('/solve', upload.single('image'), async (req, res) => {
     }
 });
 
+// Obsługa Czatu (SPOFY)
 app.post('/chat', async (req, res) => {
     try {
         const { question, context } = req.body;
