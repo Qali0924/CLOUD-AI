@@ -21,7 +21,7 @@ const geminiKeys = [
 
 let currentGeminiIndex = 0;
 
-// --- KONFIGURACJA GROQ ---
+// --- KONFIGURACJA GROQ (Używamy Llama 4 Scout) ---
 const groq = process.env.GROQ_API_KEY ? new Groq({ apiKey: process.env.GROQ_API_KEY }) : null;
 
 app.use(express.static('public'));
@@ -38,8 +38,8 @@ async function tryGemini(prompt, fileData, attempt = 0) {
         const result = await model.generateContent([prompt, fileData]);
         return (await result.response).text();
     } catch (error) {
-        if (error.status === 429 || error.message.includes('429')) {
-            console.log(`⚠️ Gemini ${currentGeminiIndex + 1} Limit/IP Block. Skok dalej...`);
+        if (error.status === 429 || error.message.includes('429') || error.message.includes('403')) {
+            console.log(`⚠️ Gemini ${currentGeminiIndex + 1} Limit/Blokada. Skok dalej...`);
             currentGeminiIndex = (currentGeminiIndex + 1) % geminiKeys.length;
             return tryGemini(prompt, fileData, attempt + 1);
         }
@@ -58,9 +58,9 @@ app.post('/solve', upload.single('image'), async (req, res) => {
 
         const finalPrompt = `Jesteś ekspertem (${subject}). Poziom: ${level}. 
         Tryb: ${mode === 'cheat' ? 'Same obliczenia i pogrubiony wynik.' : 'Wyjaśnij krok po kroku.'}
-        ZASADY: Wzory w $...$, wynik końcowy w **$...$**. Pisz po polsku.`;
+        ZASADY: Wzory w $...$, wynik końcowy w **$...$**. Odpowiadaj wyłącznie po polsku.`;
 
-        // 1. PRÓBA GEMINI
+        // 1. PRÓBA GEMINI (Klucze 1-4)
         try {
             const result = await tryGemini(finalPrompt, { 
                 inlineData: { data: base64Data, mimeType } 
@@ -68,16 +68,15 @@ app.post('/solve', upload.single('image'), async (req, res) => {
             console.log("✅ Rozwiązane przez Gemini!");
             return res.json({ result });
         } catch (e) {
-            console.log("❌ Gemini padło. Odpalam DARMOWY Groq Vision (Llama 3.2)...");
+            console.log("❌ Gemini padło (Blokada IP). Odpalam Llama 4 Scout (Plan B)...");
         }
 
-        // 2. PLAN B: GROQ (Używamy NAZW, które Groq AKCEPTUJE)
+        // 2. PLAN B: GROQ (Używamy Llama 4 Scout z Twojej listy)
         if (groq) {
             try {
-                // To jest identyfikator modelu, który Groq faktycznie ma w systemie:
-                console.log("🚀 Próba: llama-3.2-11b-vision-preview...");
+                console.log("🚀 Próba: meta-llama/llama-4-scout-17b-16e-instruct...");
                 const response = await groq.chat.completions.create({
-                    model: "llama-3.2-11b-vision-preview", 
+                    model: "meta-llama/llama-4-scout-17b-16e-instruct", 
                     messages: [
                         {
                             role: "user",
@@ -91,30 +90,11 @@ app.post('/solve', upload.single('image'), async (req, res) => {
                         }
                     ]
                 });
-                console.log("✅ Rozwiązane przez Groq (Llama 3.2)!");
+                console.log("✅ Rozwiązane przez Llama 4 Scout!");
                 return res.json({ result: response.choices[0].message.content });
             } catch (groqError) {
-                console.log("⚠️ Llama 11b błąd 404, próbuję model LLaVA...");
-                try {
-                    // LLava to stary, pewny model Vision na Groq
-                    const responseLlava = await groq.chat.completions.create({
-                        model: "llava-v1.5-7b-4096-preview",
-                        messages: [
-                            {
-                                role: "user",
-                                content: [
-                                    { type: "text", text: finalPrompt },
-                                    { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Data}` } }
-                                ]
-                            }
-                        ]
-                    });
-                    console.log("✅ Rozwiązane przez LLaVA!");
-                    return res.json({ result: responseLlava.choices[0].message.content });
-                } catch (err2) {
-                    console.error("❌ Wszystkie nazwy zawiodły:", err2.message);
-                    throw new Error("Groq nie rozpoznał żadnego modelu Vision. Sprawdź console.groq.com/docs/models");
-                }
+                console.error("❌ Błąd Groqa:", groqError.message);
+                throw new Error("Wszystkie systemy (Gemini i Llama 4) są obecnie niedostępne.");
             }
         } else {
             throw new Error("Brak klucza GROQ_API_KEY.");
@@ -126,7 +106,7 @@ app.post('/solve', upload.single('image'), async (req, res) => {
     }
 });
 
-// Reszta kodu (chat, port) zostaje bez zmian
+// Obsługa Czatu (SPOFY)
 app.post('/chat', async (req, res) => {
     try {
         const { question, context } = req.body;
@@ -135,9 +115,12 @@ app.post('/chat', async (req, res) => {
         const result = await model.generateContent(`Pytanie: ${question}. Kontekst: ${context}`);
         res.json({ answer: (await result.response).text() });
     } catch (error) {
-        res.status(500).json({ error: "Czat offline." });
+        res.status(500).json({ error: "Czat SPOFY jest obecnie offline." });
     }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Serwer SPOFY aktywny!`));
+app.listen(PORT, () => {
+    console.log(`🚀 Serwer SPOFY Multi-AI aktywny!`);
+    console.log(`Dostępne systemy: Gemini (4 klucze), Llama 4 Scout`);
+});
