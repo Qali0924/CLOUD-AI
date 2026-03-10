@@ -28,6 +28,8 @@
             --text: #e0e2e6;
         }
 
+
+
         body { 
             margin: 0; padding: 0; font-family: 'Quicksand', sans-serif;
             background-color: var(--bg); color: var(--text);
@@ -79,7 +81,15 @@
             background: rgba(255,255,255,0.03); border: 1px solid var(--border);
             border-radius: 20px; padding: 20px; transition: 0.3s;
         }
+@keyframes pulse-glow {
+    0% { box-shadow: 0 0 5px var(--accent-glow); }
+    50% { box-shadow: 0 0 20px var(--accent-glow); }
+    100% { box-shadow: 0 0 5px var(--accent-glow); }
+}
 
+.btn-primary:not(:disabled) {
+    animation: pulse-glow 2s infinite;
+}
         .picker { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         .chip { 
             padding: 12px; border-radius: 12px; border: 1px solid var(--border); 
