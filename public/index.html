@@ -326,19 +326,38 @@
             if (window.MathJax) MathJax.typesetPromise([out]);
         }
 
-        async function askChat() {
-            const q = document.getElementById('chatInput').value;
-            const resArea = document.getElementById('chatResponse');
-            resArea.innerText = "CLOUD AI myśli...";
-            const res = await fetch('/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ question: q, context: document.getElementById('result').innerText })
-            });
-            const d = await res.json();
-            resArea.innerHTML = marked.parse(d.answer);
-            if (window.MathJax) MathJax.typesetPromise([resArea]);
+async function askChat() {
+    const q = document.getElementById('chatInput').value;
+    const resArea = document.getElementById('chatResponse');
+    const fullContext = document.getElementById('result').innerText; // Pobieramy treść wyniku
+
+    if (!q) return;
+
+    resArea.innerHTML = "<span style='color:var(--accent)'>CLOUD AI myśli...</span>";
+    
+    try {
+        const res = await fetch('/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            // Wysyłamy pytanie ORAZ kontekst z pola wynikowego
+            body: JSON.stringify({ 
+                question: q, 
+                context: fullContext 
+            })
+        });
+        
+        const d = await res.json();
+        
+        // Renderujemy odpowiedź używając marked (dla markdown) i MathJax (dla wzorów)
+        resArea.innerHTML = marked.parse(d.answer);
+        
+        if (window.MathJax) {
+            MathJax.typesetPromise([resArea]);
         }
+    } catch (e) {
+        resArea.innerHTML = "<span style='color:#ff4d4d'>Błąd: Nie udało się połączyć z CLOUD AI.</span>";
+    }
+}
     </script>
 </body>
 </html>
