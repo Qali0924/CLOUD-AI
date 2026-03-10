@@ -24,25 +24,27 @@ const groq = process.env.GROQ_API_KEY ? new Groq({ apiKey: process.env.GROQ_API_
 
 app.use(express.static('public'));
 
-// --- LOGIKA ROTACJI GEMINI ---
-async function tryGemini(prompt, fileData, attempt = 0) {
-    if (attempt >= geminiKeys.length) throw new Error("Wszystkie klucze Gemini zablokowane.");
+// --- UNIWERSALNA FUNKCJA ROTACJI GEMINI ---
+async function tryGemini(prompt, fileData = null, attempt = 0) {
+    if (attempt >= geminiKeys.length) throw new Error("BLOKADA_IP");
     
     const genAI = new GoogleGenerativeAI(geminiKeys[currentGeminiIndex].trim());
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash", apiVersion: "v1beta" });
 
     try {
-        console.log(`[Gemini] Próba kluczem ${currentGeminiIndex + 1}...`);
-        const result = await model.generateContent([prompt, fileData]);
+        console.log(`[Gemini] Próba (Klucz ${currentGeminiIndex + 1})...`);
+        const result = fileData 
+            ? await model.generateContent([prompt, fileData]) 
+            : await model.generateContent(prompt);
         return (await result.response).text();
     } catch (error) {
-        console.log(`⚠️ Gemini ${currentGeminiIndex + 1} błąd. Rotacja...`);
+        console.log(`⚠️ Gemini ${currentGeminiIndex + 1} błąd. Przełączam...`);
         currentGeminiIndex = (currentGeminiIndex + 1) % geminiKeys.length;
         return tryGemini(prompt, fileData, attempt + 1);
     }
 }
 
-// --- GŁÓWNA OBSŁUGA ZADANIA ---
+// --- ROZWIĄZYWANIE ZADAŃ (ZDJĘCIA) ---
 app.post('/solve', upload.single('image'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: "Wgraj zdjęcie! 📸" });
@@ -51,73 +53,60 @@ app.post('/solve', upload.single('image'), async (req, res) => {
         const base64Data = req.file.buffer.toString("base64");
         const mimeType = req.file.mimetype;
 
-        // Skoncentrowany Prompt - usuwa "myślenie na głos" modelu
-        const finalPrompt = `Jesteś ekspertem (${subject}). Poziom: ${level}.
-        ROZWIĄŻ ZADANIE ZE ZDJĘCIA.
-        
-        WYMAGANIA:
-        - Nie pisz "Krok 1: Zidentyfikuj wzory" ani innych opisów swoich procesów myślowych.
-        - Podawaj tylko czyste etapy obliczeń.
-        - Każdy etap obliczeń pogrubiaj dla czytelności.
-        - Sprawdź dwukrotnie znaki (+/-) i potęgi pierwiastków przed wypisaniem wyniku (wykonaj to w pamięci).
-        - Używaj $...$ dla wzorów i obliczeń.
-        
-        FORMAT ODPOWIEDZI:
-        1. **Zastosowane wzory:** (krótka lista)
-        2. **Obliczenia:** (czytelne etapy)
-        3. ### WYNIK: **$...$**
+        const finalPrompt = `Jesteś nauczycielem (${subject}). Poziom: ${level}. Rozwiąż zadanie ze zdjęcia.
+        ZASADY:
+        1. Podziel na logiczne **Etapy**.
+        2. Używaj $...$ do matematyki. Pogrubiaj ważne fragmenty.
+        3. Obliczaj bardzo dokładnie pierwiastki i potęgi.
+        ### WYNIK KOŃCOWY: **$...$**`;
 
-        Język: Polski. Tryb: ${mode === 'cheat' ? 'Same obliczenia i pogrubiony wynik.' : 'Wyjaśnij zwięźle.'}`;
-
-        // 1. Próba Gemini
         try {
-            const result = await tryGemini(finalPrompt, { 
-                inlineData: { data: base64Data, mimeType } 
-            });
+            const result = await tryGemini(finalPrompt, { inlineData: { data: base64Data, mimeType } });
             return res.json({ result });
         } catch (e) {
-            console.log("❌ Gemini padło. Odpalam Llama 4 Scout...");
-        }
-
-        // 2. Plan B: Groq (Llama 4 Scout)
-        if (groq) {
-            try {
+            console.log("❌ Gemini padło. Uruchamiam Llama 4 Scout...");
+            if (groq) {
                 const response = await groq.chat.completions.create({
                     model: "meta-llama/llama-4-scout-17b-16e-instruct", 
-                    messages: [
-                        {
-                            role: "user",
-                            content: [
-                                { type: "text", text: finalPrompt },
-                                { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Data}` } }
-                            ]
-                        }
-                    ],
-                    temperature: 0.1 // Maksymalna precyzja, zero "kreatywności"
+                    messages: [{ role: "user", content: [{ type: "text", text: finalPrompt }, { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Data}` } }] }],
+                    temperature: 0.1
                 });
                 return res.json({ result: response.choices[0].message.content });
-            } catch (err) {
-                console.error("Błąd Groq:", err.message);
-                res.status(500).json({ error: "Systemy AI przeciążone. Spróbuj za chwilę." });
             }
+            throw new Error("Brak dostępnych systemów AI.");
         }
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-// Obsługa Czatu SPOFY
+// --- NAPRAWIONY CZAT SPOFY ---
 app.post('/chat', async (req, res) => {
     try {
         const { question, context } = req.body;
-        const genAI = new GoogleGenerativeAI(geminiKeys[0]);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-        const result = await model.generateContent(`Kontekst: ${context}. Pytanie: ${question}`);
-        res.json({ answer: (await result.response).text() });
-    } catch (e) {
-        res.status(500).send("Czat offline.");
+        const chatPrompt = `Kontekst zadania: ${context}\n\nUżytkownik pyta: ${question}\n\nOdpowiedz krótko i pomocnie jako korepetytor SPOFY. Używaj $...$ do wzorów.`;
+
+        try {
+            // Najpierw próbujemy Gemini (z rotacją kluczy)
+            const answer = await tryGemini(chatPrompt);
+            return res.json({ answer });
+        } catch (e) {
+            console.log("❌ Czat Gemini zablokowany. Przełączam czat na Groq...");
+            // Jeśli Gemini nie działa, używamy szybkiego modelu tekstowego z Groq
+            if (groq) {
+                const response = await groq.chat.completions.create({
+                    model: "llama-3.3-70b-versatile", // Bardzo mądry model tekstowy z Twojej listy
+                    messages: [{ role: "user", content: chatPrompt }]
+                });
+                return res.json({ answer: response.choices[0].message.content });
+            }
+            throw new Error("Czat jest obecnie niedostępny.");
+        }
+    } catch (error) {
+        console.error("Błąd czatu:", error.message);
+        res.status(500).json({ error: "Błąd połączenia z czatem." });
     }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 SPOFY Live na porcie ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Serwer SPOFY w pełni sprawny (Solve + Chat)!`));
