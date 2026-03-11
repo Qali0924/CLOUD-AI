@@ -1,0 +1,15 @@
+{
+  "name": "CLOUD AI",
+  "short_name": "CLOUD AI",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#050608",
+  "theme_color": "#2ecc71",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1693/1693746.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
